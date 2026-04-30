@@ -1,0 +1,6 @@
+AGENTS.md
+CLAUDE.md
+docs/**
+src/frontend/index.html
+wrangler.toml
+.prettierignore

@@ -31,7 +31,7 @@ export type Property = {
 export type PropertyUrl = {
   id: string;
   property_id: string;
-  platform: 'avito' | 'ostrovok' | 'yandex';
+  platform: "avito" | "ostrovok" | "yandex";
   url: string;
   created_at: string;
   updated_at: string;
@@ -41,13 +41,13 @@ export type Review = {
   id: string;
   property_id: string;
   owner_id: string;
-  platform: 'avito' | 'ostrovok' | 'yandex';
+  platform: "avito" | "ostrovok" | "yandex";
   platform_review_id: string;
   author_name_hash?: string;
   rating: number;
   text: string;
   review_date?: string;
-  sentiment?: 'positive' | 'neutral' | 'negative';
+  sentiment?: "positive" | "neutral" | "negative";
   violation_detected: boolean;
   violations?: unknown[];
   public_response?: string;
@@ -63,25 +63,33 @@ export type Review = {
 };
 
 export type ReviewStatus =
-  | 'new'
-  | 'draft_ready'
-  | 'approved'
-  | 'edited'
-  | 'rejected'
-  | 'appeal_sent'
-  | 'appeal_success'
-  | 'appeal_denied';
+  | "new"
+  | "draft_ready"
+  | "approved"
+  | "edited"
+  | "rejected"
+  | "appeal_sent"
+  | "appeal_success"
+  | "appeal_denied";
 
-export type Platform = 'avito' | 'ostrovok' | 'yandex';
+export type Platform = "avito" | "ostrovok" | "yandex";
 
-export type Sentiment = 'positive' | 'neutral' | 'negative';
+export type Sentiment = "positive" | "neutral" | "negative";
 
-export type ViolationType = 'insult' | 'profanity' | 'personal_data' | 'competitor_ads' | 'discrimination';
+export type ViolationType =
+  | "insult"
+  | "profanity"
+  | "personal_data"
+  | "competitor_ads"
+  | "discrimination";
 
-export type AgentMemoryLevel = 'global' | 'local' | 'tactical';
+export type AgentMemoryLevel = "global" | "local" | "tactical";
 
-export type LLMProvider = 'deepseek' | 'gpt-4o-mini';
+export type LLMProvider = "deepseek" | "gpt-4o-mini";
 
-export type LegalGroundSource = 'platform_rules' | 'gk_rf' | 'uk_rf';
+export type LegalGroundSource = "platform_rules" | "gk_rf" | "uk_rf";
 
-export type AppealRecommendationAction = 'approve' | 'review_carefully' | 'reject';
+export type AppealRecommendationAction =
+  | "approve"
+  | "review_carefully"
+  | "reject";

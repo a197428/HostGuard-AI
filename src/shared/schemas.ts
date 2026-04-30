@@ -1,47 +1,57 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // =============================================================================
 // Platform & Enums
 // =============================================================================
 
-export const PlatformSchema = z.enum(['avito', 'ostrovok', 'yandex']);
+export const PlatformSchema = z.enum(["avito", "ostrovok", "yandex"]);
 export type Platform = z.infer<typeof PlatformSchema>;
 
-export const SentimentSchema = z.enum(['positive', 'neutral', 'negative']);
+export const SentimentSchema = z.enum(["positive", "neutral", "negative"]);
 export type Sentiment = z.infer<typeof SentimentSchema>;
 
 export const ReviewStatusSchema = z.enum([
-  'new',
-  'draft_ready',
-  'approved',
-  'edited',
-  'rejected',
-  'appeal_sent',
-  'appeal_success',
-  'appeal_denied',
+  "new",
+  "draft_ready",
+  "approved",
+  "edited",
+  "rejected",
+  "appeal_sent",
+  "appeal_success",
+  "appeal_denied",
 ]);
 export type ReviewStatus = z.infer<typeof ReviewStatusSchema>;
 
 export const ViolationTypeSchema = z.enum([
-  'insult',
-  'profanity',
-  'personal_data',
-  'competitor_ads',
-  'discrimination',
+  "insult",
+  "profanity",
+  "personal_data",
+  "competitor_ads",
+  "discrimination",
 ]);
 export type ViolationType = z.infer<typeof ViolationTypeSchema>;
 
-export const AgentMemoryLevelSchema = z.enum(['global', 'local', 'tactical']);
+export const AgentMemoryLevelSchema = z.enum(["global", "local", "tactical"]);
 export type AgentMemoryLevel = z.infer<typeof AgentMemoryLevelSchema>;
 
-export const LLMProviderSchema = z.enum(['deepseek', 'gpt-4o-mini']);
+export const LLMProviderSchema = z.enum(["deepseek", "gpt-4o-mini"]);
 export type LLMProvider = z.infer<typeof LLMProviderSchema>;
 
-export const LegalGroundSourceSchema = z.enum(['platform_rules', 'gk_rf', 'uk_rf']);
+export const LegalGroundSourceSchema = z.enum([
+  "platform_rules",
+  "gk_rf",
+  "uk_rf",
+]);
 export type LegalGroundSource = z.infer<typeof LegalGroundSourceSchema>;
 
-export const AppealRecommendationActionSchema = z.enum(['approve', 'review_carefully', 'reject']);
-export type AppealRecommendationAction = z.infer<typeof AppealRecommendationActionSchema>;
+export const AppealRecommendationActionSchema = z.enum([
+  "approve",
+  "review_carefully",
+  "reject",
+]);
+export type AppealRecommendationAction = z.infer<
+  typeof AppealRecommendationActionSchema
+>;
 
 // =============================================================================
 // Supabase Tables
@@ -108,7 +118,7 @@ export const ReviewSchema = z.object({
   appeal_text: z.string().optional(),
   appeal_confidence: z.number().min(0).max(1).optional(),
   legal_grounds: z.array(z.unknown()).optional(),
-  status: ReviewStatusSchema.default('new'),
+  status: ReviewStatusSchema.default("new"),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   is_deleted: z.boolean().default(false),
@@ -117,7 +127,12 @@ export const ReviewSchema = z.object({
 export type Review = z.infer<typeof ReviewSchema>;
 
 // llm_calls – Audit log для каждого вызова LLM
-export const LLmCallResponseStatusSchema = z.enum(['success', 'validation_error', 'retry', 'fallback']);
+export const LLmCallResponseStatusSchema = z.enum([
+  "success",
+  "validation_error",
+  "retry",
+  "fallback",
+]);
 export type LLmCallResponseStatus = z.infer<typeof LLmCallResponseStatusSchema>;
 
 export const LLmCallSchema = z.object({
@@ -217,7 +232,7 @@ export const RecommendationSchema = z.object({
 export type Recommendation = z.infer<typeof RecommendationSchema>;
 
 // Main AI Response (Appeal Agent)
-export const AppealAgentResponseSchema = z.object({
+const AppealAgentBaseSchema = z.object({
   review_id: z.string(),
   platform: PlatformSchema,
   sentiment: SentimentSchema,
@@ -225,9 +240,30 @@ export const AppealAgentResponseSchema = z.object({
   stay_verification: StayVerificationSchema,
   violations: z.array(ViolationSchema),
   public_response: PublicResponseSchema,
-  appeal: AppealSchema.optional(),
   recommendation: RecommendationSchema,
 });
+
+export const NonViolationAppealAgentResponseSchema =
+  AppealAgentBaseSchema.extend({
+    violation_detected: z.literal(false),
+    appeal: z.undefined().optional(),
+  });
+export type NonViolationAppealAgentResponse = z.infer<
+  typeof NonViolationAppealAgentResponseSchema
+>;
+
+export const ViolationAppealAgentResponseSchema = AppealAgentBaseSchema.extend({
+  violation_detected: z.literal(true),
+  appeal: AppealSchema,
+});
+export type ViolationAppealAgentResponse = z.infer<
+  typeof ViolationAppealAgentResponseSchema
+>;
+
+export const AppealAgentResponseSchema = z.union([
+  NonViolationAppealAgentResponseSchema,
+  ViolationAppealAgentResponseSchema,
+]);
 export type AppealAgentResponse = z.infer<typeof AppealAgentResponseSchema>;
 
 // =============================================================================

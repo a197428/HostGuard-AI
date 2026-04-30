@@ -1,3 +1,5 @@
+import { Redis } from "@upstash/redis";
+
 // =============================================================================
 // Upstash Redis Client for Review Deduplication
 // ADR-003: Supabase as primary storage, Redis as ephemeral buffer (TTL 90 days)
@@ -21,15 +23,14 @@ export const REDIS_KEYS = {
   rateLimit: (ownerId: string, endpoint: string): string =>
     `ratelimit:${ownerId}:${endpoint}`,
 
-  session: (sessionId: string): string =>
-    `session:${sessionId}`,
+  session: (sessionId: string): string => `session:${sessionId}`,
 } as const;
 
 // TTL values in seconds (from DATA_MODEL.md)
 export const REDIS_TTL = {
   REVIEW_DEDUP: 7776000, // 90 days = 90 * 24 * 60 * 60
-  RATE_LIMIT: 60,        // 60 seconds (sliding window)
-  SESSION: 86400,        // 24 hours
+  RATE_LIMIT: 60, // 60 seconds (sliding window)
+  SESSION: 86400, // 24 hours
 } as const;
 
 // =============================================================================
@@ -37,12 +38,25 @@ export const REDIS_TTL = {
 // =============================================================================
 
 export interface IRedisRepository {
-  isReviewProcessed(platform: string, platformReviewId: string): Promise<boolean>;
-  markReviewProcessed(platform: string, platformReviewId: string): Promise<void>;
-  checkAndMarkReviewProcessed(platform: string, platformReviewId: string): Promise<DedupResult>;
+  isReviewProcessed(
+    platform: string,
+    platformReviewId: string,
+  ): Promise<boolean>;
+  markReviewProcessed(
+    platform: string,
+    platformReviewId: string,
+  ): Promise<void>;
+  checkAndMarkReviewProcessed(
+    platform: string,
+    platformReviewId: string,
+  ): Promise<DedupResult>;
   getReviewTTL(platform: string, platformReviewId: string): Promise<number>;
   deleteReviewKey(platform: string, platformReviewId: string): Promise<void>;
-  checkRateLimit(ownerId: string, endpoint: string, limit?: number): Promise<boolean>;
+  checkRateLimit(
+    ownerId: string,
+    endpoint: string,
+    limit?: number,
+  ): Promise<boolean>;
   getRateLimitCount(ownerId: string, endpoint: string): Promise<number>;
   setSession(sessionId: string, data: Record<string, unknown>): Promise<void>;
   getSession<T = Record<string, unknown>>(sessionId: string): Promise<T | null>;
@@ -57,22 +71,28 @@ export interface IRedisRepository {
 export class MockRedisRepository implements IRedisRepository {
   private store: Map<string, { value: string; expireAt?: number }> = new Map();
 
-  async isReviewProcessed(platform: string, platformReviewId: string): Promise<boolean> {
+  async isReviewProcessed(
+    platform: string,
+    platformReviewId: string,
+  ): Promise<boolean> {
     const key = REDIS_KEYS.review(platform, platformReviewId);
     return this.store.has(key);
   }
 
-  async markReviewProcessed(platform: string, platformReviewId: string): Promise<void> {
+  async markReviewProcessed(
+    platform: string,
+    platformReviewId: string,
+  ): Promise<void> {
     const key = REDIS_KEYS.review(platform, platformReviewId);
     this.store.set(key, {
-      value: 'processed',
+      value: "processed",
       expireAt: Date.now() + REDIS_TTL.REVIEW_DEDUP * 1000,
     });
   }
 
   async checkAndMarkReviewProcessed(
     platform: string,
-    platformReviewId: string
+    platformReviewId: string,
   ): Promise<DedupResult> {
     const key = REDIS_KEYS.review(platform, platformReviewId);
 
@@ -81,31 +101,38 @@ export class MockRedisRepository implements IRedisRepository {
     }
 
     this.store.set(key, {
-      value: 'processed',
+      value: "processed",
       expireAt: Date.now() + REDIS_TTL.REVIEW_DEDUP * 1000,
     });
 
     return { isNew: true, key };
   }
 
-  async getReviewTTL(platform: string, platformReviewId: string): Promise<number> {
+  async getReviewTTL(
+    platform: string,
+    platformReviewId: string,
+  ): Promise<number> {
     const key = REDIS_KEYS.review(platform, platformReviewId);
     const entry = this.store.get(key);
     if (!entry || !entry.expireAt) return -1;
     return Math.max(0, Math.floor((entry.expireAt - Date.now()) / 1000));
   }
 
-  async deleteReviewKey(platform: string, platformReviewId: string): Promise<void> {
+  async deleteReviewKey(
+    platform: string,
+    platformReviewId: string,
+  ): Promise<void> {
     const key = REDIS_KEYS.review(platform, platformReviewId);
     this.store.delete(key);
   }
 
-  private rateLimitStore: Map<string, { count: number; expireAt: number }> = new Map();
+  private rateLimitStore: Map<string, { count: number; expireAt: number }> =
+    new Map();
 
   async checkRateLimit(
     ownerId: string,
     endpoint: string,
-    limit: number = 100
+    limit: number = 100,
   ): Promise<boolean> {
     const key = REDIS_KEYS.rateLimit(ownerId, endpoint);
     const now = Date.now();
@@ -134,9 +161,13 @@ export class MockRedisRepository implements IRedisRepository {
     return entry.count;
   }
 
-  private sessionStore: Map<string, { value: string; expireAt: number }> = new Map();
+  private sessionStore: Map<string, { value: string; expireAt: number }> =
+    new Map();
 
-  async setSession(sessionId: string, data: Record<string, unknown>): Promise<void> {
+  async setSession(
+    sessionId: string,
+    data: Record<string, unknown>,
+  ): Promise<void> {
     const key = REDIS_KEYS.session(sessionId);
     this.sessionStore.set(key, {
       value: JSON.stringify(data),
@@ -144,7 +175,9 @@ export class MockRedisRepository implements IRedisRepository {
     });
   }
 
-  async getSession<T = Record<string, unknown>>(sessionId: string): Promise<T | null> {
+  async getSession<T = Record<string, unknown>>(
+    sessionId: string,
+  ): Promise<T | null> {
     const key = REDIS_KEYS.session(sessionId);
     const entry = this.sessionStore.get(key);
     if (!entry || entry.expireAt < Date.now()) return null;
@@ -161,7 +194,7 @@ export class MockRedisRepository implements IRedisRepository {
   }
 
   async ping(): Promise<string> {
-    return 'PONG';
+    return "PONG";
   }
 
   clear(): void {
@@ -176,52 +209,56 @@ export class MockRedisRepository implements IRedisRepository {
 // =============================================================================
 
 export class RedisRepository implements IRedisRepository {
-  private client: {
-    set: (key: string, value: string, options?: { ex?: number; nx?: boolean }) => Promise<string | null>;
-    get: (key: string) => Promise<string | null>;
-    exists: (key: string) => Promise<number>;
-    del: (key: string) => Promise<number>;
-    incr: (key: string) => Promise<number>;
-    expire: (key: string, seconds: number) => Promise<number>;
-    ttl: (key: string) => Promise<number>;
-    ping: () => Promise<string>;
-  };
+  private client: Redis;
 
   constructor(config: RedisConfig) {
-    // This will be initialized with actual Upstash client in Workers
-    // For now, we define the interface
-    this.client = {} as any;
+    this.client = new Redis({
+      url: config.url,
+      token: config.token,
+    });
   }
 
-  async isReviewProcessed(platform: string, platformReviewId: string): Promise<boolean> {
+  async isReviewProcessed(
+    platform: string,
+    platformReviewId: string,
+  ): Promise<boolean> {
     const key = REDIS_KEYS.review(platform, platformReviewId);
     const exists = await this.client.exists(key);
     return exists === 1;
   }
 
-  async markReviewProcessed(platform: string, platformReviewId: string): Promise<void> {
+  async markReviewProcessed(
+    platform: string,
+    platformReviewId: string,
+  ): Promise<void> {
     const key = REDIS_KEYS.review(platform, platformReviewId);
-    await this.client.set(key, 'processed', { ex: REDIS_TTL.REVIEW_DEDUP });
+    await this.client.set(key, "processed", { ex: REDIS_TTL.REVIEW_DEDUP });
   }
 
   async checkAndMarkReviewProcessed(
     platform: string,
-    platformReviewId: string
+    platformReviewId: string,
   ): Promise<DedupResult> {
     const key = REDIS_KEYS.review(platform, platformReviewId);
-    const result = await this.client.set(key, 'processed', {
+    const result = await this.client.set(key, "processed", {
       nx: true,
       ex: REDIS_TTL.REVIEW_DEDUP,
     });
-    return { isNew: result === 'OK', key };
+    return { isNew: result === "OK", key };
   }
 
-  async getReviewTTL(platform: string, platformReviewId: string): Promise<number> {
+  async getReviewTTL(
+    platform: string,
+    platformReviewId: string,
+  ): Promise<number> {
     const key = REDIS_KEYS.review(platform, platformReviewId);
     return this.client.ttl(key);
   }
 
-  async deleteReviewKey(platform: string, platformReviewId: string): Promise<void> {
+  async deleteReviewKey(
+    platform: string,
+    platformReviewId: string,
+  ): Promise<void> {
     const key = REDIS_KEYS.review(platform, platformReviewId);
     await this.client.del(key);
   }
@@ -229,7 +266,7 @@ export class RedisRepository implements IRedisRepository {
   async checkRateLimit(
     ownerId: string,
     endpoint: string,
-    limit: number = 100
+    limit: number = 100,
   ): Promise<boolean> {
     const key = REDIS_KEYS.rateLimit(ownerId, endpoint);
     const count = await this.client.incr(key);
@@ -245,12 +282,17 @@ export class RedisRepository implements IRedisRepository {
     return count ? parseInt(count, 10) : 0;
   }
 
-  async setSession(sessionId: string, data: Record<string, unknown>): Promise<void> {
+  async setSession(
+    sessionId: string,
+    data: Record<string, unknown>,
+  ): Promise<void> {
     const key = REDIS_KEYS.session(sessionId);
     await this.client.set(key, JSON.stringify(data), { ex: REDIS_TTL.SESSION });
   }
 
-  async getSession<T = Record<string, unknown>>(sessionId: string): Promise<T | null> {
+  async getSession<T = Record<string, unknown>>(
+    sessionId: string,
+  ): Promise<T | null> {
     const key = REDIS_KEYS.session(sessionId);
     const data = await this.client.get<string>(key);
     if (!data) return null;

@@ -8,13 +8,16 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "esModuleInterop": true,
+    "experimentalDecorators": true,
     "skipLibCheck": true,
     "lib": ["ES2022"],
     "types": ["@cloudflare/workers-types", "vitest/globals"],
     "baseUrl": ".",
     "paths": {
       "@hostguard/shared": ["src/shared/index"],
+      "@hostguard/shared/*": ["src/shared/*"],
       "@hostguard/backend": ["src/backend/index"],
+      "@hostguard/backend/*": ["src/backend/*"],
       "@hostguard/frontend": ["src/frontend/index"]
     }
   },

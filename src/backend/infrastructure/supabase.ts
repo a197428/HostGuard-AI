@@ -1,46 +1,78 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Owner, Property, PropertyUrl, Review, LLmCall, FeatureFlag, AgentMemory } from '@hostguard/shared';
-import { OwnerSchema, PropertySchema, PropertyUrlSchema, ReviewSchema, LLmCallSchema, FeatureFlagSchema, AgentMemorySchema } from '@hostguard/shared/schemas';
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import {
+  Owner,
+  Property,
+  PropertyUrl,
+  Review,
+  LLmCall,
+  FeatureFlag,
+  AgentMemory,
+} from "@hostguard/shared";
+import {
+  OwnerSchema,
+  PropertySchema,
+  PropertyUrlSchema,
+  ReviewSchema,
+  LLmCallSchema,
+  FeatureFlagSchema,
+  AgentMemorySchema,
+} from "@hostguard/shared/schemas";
+
+type Insertable<T, OmittedKeys extends keyof T = never> = Omit<
+  T,
+  "id" | "created_at" | "updated_at" | OmittedKeys
+> &
+  Partial<Pick<T, Extract<"id" | "created_at" | "updated_at", keyof T>>>;
 
 export interface Database {
   public: {
     Tables: {
       owners: {
         Row: Owner;
-        Insert: Omit<Owner, 'created_at' | 'updated_at' | 'is_deleted' | 'deleted_at'>;
-        Update: Partial<Omit<Owner, 'id' | 'created_at'>>;
+        Insert: Insertable<Owner, "is_deleted" | "deleted_at">;
+        Update: Partial<Omit<Owner, "id" | "created_at">>;
+        Relationships: [];
       };
       properties: {
         Row: Property;
-        Insert: Omit<Property, 'created_at' | 'updated_at' | 'is_deleted' | 'deleted_at'>;
-        Update: Partial<Omit<Property, 'id' | 'created_at'>>;
+        Insert: Insertable<Property, "is_deleted" | "deleted_at">;
+        Update: Partial<Omit<Property, "id" | "created_at">>;
+        Relationships: [];
       };
       property_urls: {
         Row: PropertyUrl;
-        Insert: Omit<PropertyUrl, 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<PropertyUrl, 'id' | 'created_at'>>;
+        Insert: Insertable<PropertyUrl>;
+        Update: Partial<Omit<PropertyUrl, "id" | "created_at">>;
+        Relationships: [];
       };
       reviews: {
         Row: Review;
-        Insert: Omit<Review, 'created_at' | 'updated_at' | 'is_deleted' | 'deleted_at'>;
-        Update: Partial<Omit<Review, 'id' | 'created_at'>>;
+        Insert: Insertable<Review, "is_deleted" | "deleted_at">;
+        Update: Partial<Omit<Review, "id" | "created_at">>;
+        Relationships: [];
       };
       llm_calls: {
         Row: LLmCall;
-        Insert: Omit<LLmCall, 'id' | 'created_at'>;
+        Insert: Insertable<LLmCall>;
         Update: never; // LLM calls are immutable
+        Relationships: [];
       };
       feature_flags: {
         Row: FeatureFlag;
-        Insert: Omit<FeatureFlag, 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<FeatureFlag, 'id' | 'created_at'>>;
+        Insert: Insertable<FeatureFlag>;
+        Update: Partial<Omit<FeatureFlag, "id" | "created_at">>;
+        Relationships: [];
       };
       agent_memory: {
         Row: AgentMemory;
-        Insert: Omit<AgentMemory, 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<AgentMemory, 'id' | 'created_at'>>;
+        Insert: Insertable<AgentMemory>;
+        Update: Partial<Omit<AgentMemory, "id" | "created_at">>;
+        Relationships: [];
       };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
   };
 }
 
@@ -50,7 +82,7 @@ export function createSupabaseClient(
   options?: {
     auth?: { persistSession?: boolean };
     global?: { headers?: Record<string, string> };
-  }
+  },
 ): SupabaseClient<Database> {
   return createClient<Database>(supabaseUrl, supabaseKey, {
     auth: options?.auth,
@@ -97,9 +129,9 @@ export class SupabaseRepository {
   // Owners
   async getOwner(id: string): Promise<Owner | null> {
     const { data, error } = await this.client
-      .from('owners')
-      .select('*')
-      .eq('id', id)
+      .from("owners")
+      .select("*")
+      .eq("id", id)
       .single();
 
     if (error) throw error;
@@ -108,19 +140,21 @@ export class SupabaseRepository {
 
   async getOwnerByEmail(email: string): Promise<Owner | null> {
     const { data, error } = await this.client
-      .from('owners')
-      .select('*')
-      .eq('email', email)
+      .from("owners")
+      .select("*")
+      .eq("email", email)
       .single();
 
     if (error) throw error;
     return data ? validateOwner(data) : null;
   }
 
-  async createOwner(owner: Omit<Owner, 'id' | 'created_at' | 'updated_at'>): Promise<Owner> {
+  async createOwner(
+    owner: Database["public"]["Tables"]["owners"]["Insert"],
+  ): Promise<Owner> {
     const { data, error } = await this.client
-      .from('owners')
-      .insert(owner as Database['public']['Tables']['owners']['Insert'])
+      .from("owners")
+      .insert(owner as Database["public"]["Tables"]["owners"]["Insert"])
       .select()
       .single();
 
@@ -131,10 +165,10 @@ export class SupabaseRepository {
   // Properties
   async getProperties(ownerId: string): Promise<Property[]> {
     const { data, error } = await this.client
-      .from('properties')
-      .select('*')
-      .eq('owner_id', ownerId)
-      .eq('is_deleted', false);
+      .from("properties")
+      .select("*")
+      .eq("owner_id", ownerId)
+      .eq("is_deleted", false);
 
     if (error) throw error;
     return data.map(validateProperty);
@@ -142,19 +176,21 @@ export class SupabaseRepository {
 
   async getProperty(id: string): Promise<Property | null> {
     const { data, error } = await this.client
-      .from('properties')
-      .select('*')
-      .eq('id', id)
+      .from("properties")
+      .select("*")
+      .eq("id", id)
       .single();
 
     if (error) throw error;
     return data ? validateProperty(data) : null;
   }
 
-  async createProperty(property: Omit<Property, 'id' | 'created_at' | 'updated_at'>): Promise<Property> {
+  async createProperty(
+    property: Database["public"]["Tables"]["properties"]["Insert"],
+  ): Promise<Property> {
     const { data, error } = await this.client
-      .from('properties')
-      .insert(property as Database['public']['Tables']['properties']['Insert'])
+      .from("properties")
+      .insert(property as Database["public"]["Tables"]["properties"]["Insert"])
       .select()
       .single();
 
@@ -162,11 +198,14 @@ export class SupabaseRepository {
     return validateProperty(data);
   }
 
-  async updateProperty(id: string, updates: Partial<Property>): Promise<Property> {
+  async updateProperty(
+    id: string,
+    updates: Partial<Property>,
+  ): Promise<Property> {
     const { data, error } = await this.client
-      .from('properties')
-      .update(updates as Database['public']['Tables']['properties']['Update'])
-      .eq('id', id)
+      .from("properties")
+      .update(updates as Database["public"]["Tables"]["properties"]["Update"])
+      .eq("id", id)
       .select()
       .single();
 
@@ -177,9 +216,9 @@ export class SupabaseRepository {
   // Property URLs
   async getPropertyUrls(propertyId: string): Promise<PropertyUrl[]> {
     const { data, error } = await this.client
-      .from('property_urls')
-      .select('*')
-      .eq('property_id', propertyId);
+      .from("property_urls")
+      .select("*")
+      .eq("property_id", propertyId);
 
     if (error) throw error;
     return data.map(validatePropertyUrl);
@@ -187,11 +226,11 @@ export class SupabaseRepository {
 
   async createPropertyUrl(
     propertyId: string,
-    platform: 'avito' | 'ostrovok' | 'yandex',
-    url: string
+    platform: "avito" | "ostrovok" | "yandex",
+    url: string,
   ): Promise<PropertyUrl> {
     const { data, error } = await this.client
-      .from('property_urls')
+      .from("property_urls")
       .insert({ property_id: propertyId, platform, url })
       .select()
       .single();
@@ -203,35 +242,37 @@ export class SupabaseRepository {
   // Reviews
   async getReviews(propertyId: string): Promise<Review[]> {
     const { data, error } = await this.client
-      .from('reviews')
-      .select('*')
-      .eq('property_id', propertyId)
-      .eq('is_deleted', false)
-      .order('created_at', { ascending: false });
+      .from("reviews")
+      .select("*")
+      .eq("property_id", propertyId)
+      .eq("is_deleted", false)
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
     return data.map(validateReview);
   }
 
   async getReviewByPlatformId(
-    platform: 'avito' | 'ostrovok' | 'yandex',
-    platformReviewId: string
+    platform: "avito" | "ostrovok" | "yandex",
+    platformReviewId: string,
   ): Promise<Review | null> {
     const { data, error } = await this.client
-      .from('reviews')
-      .select('*')
-      .eq('platform', platform)
-      .eq('platform_review_id', platformReviewId)
+      .from("reviews")
+      .select("*")
+      .eq("platform", platform)
+      .eq("platform_review_id", platformReviewId)
       .single();
 
     if (error) throw error;
     return data ? validateReview(data) : null;
   }
 
-  async createReview(review: Omit<Review, 'id' | 'created_at' | 'updated_at'>): Promise<Review> {
+  async createReview(
+    review: Database["public"]["Tables"]["reviews"]["Insert"],
+  ): Promise<Review> {
     const { data, error } = await this.client
-      .from('reviews')
-      .insert(review as Database['public']['Tables']['reviews']['Insert'])
+      .from("reviews")
+      .insert(review as Database["public"]["Tables"]["reviews"]["Insert"])
       .select()
       .single();
 
@@ -241,9 +282,9 @@ export class SupabaseRepository {
 
   async updateReview(id: string, updates: Partial<Review>): Promise<Review> {
     const { data, error } = await this.client
-      .from('reviews')
-      .update(updates as Database['public']['Tables']['reviews']['Update'])
-      .eq('id', id)
+      .from("reviews")
+      .update(updates as Database["public"]["Tables"]["reviews"]["Update"])
+      .eq("id", id)
       .select()
       .single();
 
@@ -253,11 +294,11 @@ export class SupabaseRepository {
 
   // LLM Calls (audit log)
   async createLLmCall(
-    call: Omit<LLmCall, 'id' | 'created_at'>
+    call: Database["public"]["Tables"]["llm_calls"]["Insert"],
   ): Promise<LLmCall> {
     const { data, error } = await this.client
-      .from('llm_calls')
-      .insert(call as Database['public']['Tables']['llm_calls']['Insert'])
+      .from("llm_calls")
+      .insert(call as Database["public"]["Tables"]["llm_calls"]["Insert"])
       .select()
       .single();
 
@@ -268,9 +309,9 @@ export class SupabaseRepository {
   // Feature Flags
   async getFeatureFlag(name: string): Promise<FeatureFlag | null> {
     const { data, error } = await this.client
-      .from('feature_flags')
-      .select('*')
-      .eq('name', name)
+      .from("feature_flags")
+      .select("*")
+      .eq("name", name)
       .single();
 
     if (error) throw error;
@@ -279,9 +320,9 @@ export class SupabaseRepository {
 
   async getEnabledFeatureFlags(ownerId?: string): Promise<FeatureFlag[]> {
     let query = this.client
-      .from('feature_flags')
-      .select('*')
-      .eq('enabled', true);
+      .from("feature_flags")
+      .select("*")
+      .eq("enabled", true);
 
     const { data, error } = await query;
 
@@ -290,7 +331,12 @@ export class SupabaseRepository {
     // Filter by owner_id if specified (for canary deployments)
     if (ownerId) {
       return data
-        .filter(f => !f.owner_ids || f.owner_ids.length === 0 || f.owner_ids.includes(ownerId))
+        .filter(
+          (f) =>
+            !f.owner_ids ||
+            f.owner_ids.length === 0 ||
+            f.owner_ids.includes(ownerId),
+        )
         .map(validateFeatureFlag);
     }
 
@@ -299,16 +345,13 @@ export class SupabaseRepository {
 
   // Agent Memory
   async getAgentMemory(
-    level: 'global' | 'local' | 'tactical',
-    scope?: string
+    level: "global" | "local" | "tactical",
+    scope?: string,
   ): Promise<AgentMemory[]> {
-    let query = this.client
-      .from('agent_memory')
-      .select('*')
-      .eq('level', level);
+    let query = this.client.from("agent_memory").select("*").eq("level", level);
 
     if (scope) {
-      query = query.eq('scope', scope);
+      query = query.eq("scope", scope);
     }
 
     const { data, error } = await query;
@@ -318,11 +361,11 @@ export class SupabaseRepository {
   }
 
   async createAgentMemory(
-    memory: Omit<AgentMemory, 'id' | 'created_at' | 'updated_at'>
+    memory: Database["public"]["Tables"]["agent_memory"]["Insert"],
   ): Promise<AgentMemory> {
     const { data, error } = await this.client
-      .from('agent_memory')
-      .insert(memory as Database['public']['Tables']['agent_memory']['Insert'])
+      .from("agent_memory")
+      .insert(memory as Database["public"]["Tables"]["agent_memory"]["Insert"])
       .select()
       .single();
 
@@ -330,11 +373,14 @@ export class SupabaseRepository {
     return validateAgentMemory(data);
   }
 
-  async updateAgentMemory(id: string, updates: Partial<AgentMemory>): Promise<AgentMemory> {
+  async updateAgentMemory(
+    id: string,
+    updates: Partial<AgentMemory>,
+  ): Promise<AgentMemory> {
     const { data, error } = await this.client
-      .from('agent_memory')
-      .update(updates as Database['public']['Tables']['agent_memory']['Update'])
-      .eq('id', id)
+      .from("agent_memory")
+      .update(updates as Database["public"]["Tables"]["agent_memory"]["Update"])
+      .eq("id", id)
       .select()
       .single();
 
