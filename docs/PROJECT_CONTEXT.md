@@ -1,4 +1,3 @@
-```markdown
 # HostGuard AI – Контекст проекта (PROJECT_CONTEXT.md)
 
 ## 1. Общая информация
