@@ -11,6 +11,8 @@
     "vitest": "^1.3.0"
   },
   "dependencies": {
-    "@hostguard/shared": "*"
+    "@hostguard/shared": "*",
+    "@hostguard/backend": "*",
+    "@upstash/redis": "^1.28.0"
   }
 }
