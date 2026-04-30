@@ -34,3 +34,12 @@ namespace_id = "" # Set via wrangler secrets
 [[kv_namespaces]]
 binding = "CACHE"
 id = "" # Set via wrangler secrets
+
+# Browser Rendering binding (fallback for Tavily)
+[browser_rendering]
+binding = "BROWSER_RENDERING"
+
+# Telegram Bot configuration
+# TELEGRAM_BOT_TOKEN and OWNER_TELEGRAM_ID should be set via wrangler secrets:
+# wrangler secret put TELEGRAM_BOT_TOKEN
+# wrangler secret put OWNER_TELEGRAM_ID

@@ -11,4 +11,8 @@ export interface Env {
   DEEPSEEK_MODEL?: string;
   UPSTASH_REDIS_URL?: string;
   UPSTASH_REDIS_TOKEN?: string;
+  TAVILY_API_KEY?: string;
+  BROWSER_RENDERING?: Fetcher;
+  TELEGRAM_BOT_TOKEN?: string;
+  OWNER_TELEGRAM_ID?: string;
 }

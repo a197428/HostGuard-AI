@@ -110,16 +110,16 @@ export const PROMPTS = {
 
   PII_MASKING: {
     phone: {
-      pattern: /\b\d{10,12}\b/g,
+      pattern: /(?<=^|[\s,;:.!?()-])\+?\d{10,12}(?=[\s,;:.!?()-]|$)/g,
       replacement: "[PHONE]",
     },
     email: {
-      pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
+      pattern: /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,
       replacement: "[EMAIL]",
     },
     name: {
-      pattern: /\b[А-Я][а-я]+\s+[А-Я][а-я]+\b/g,
-      replacement: "[NAME]",
+      pattern: /(?:^|[\s,;:.!?("-])([А-Я][а-я]+\s+[А-Я][а-я]+)(?=[\s,;:.!?")-]|$)/g,
+      replacement: "$1[NAME]",
     },
   },
 

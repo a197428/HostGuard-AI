@@ -1,8 +1,11 @@
 import { routeAgentRequest } from "agents";
 import { MonitorAgent } from "../agents/monitor-agent";
+import { createApiRouter } from "./api";
 import type { Env } from "../env";
 
 export { MonitorAgent };
+
+const apiRouter = createApiRouter();
 
 export default {
   async fetch(
@@ -12,6 +15,7 @@ export default {
   ): Promise<Response> {
     const url = new URL(request.url);
 
+    // Health check
     if (url.pathname === "/healthz") {
       return new Response(
         JSON.stringify({
@@ -27,6 +31,12 @@ export default {
       );
     }
 
+    // Route API requests through Hono router
+    if (url.pathname.startsWith("/api/")) {
+      return apiRouter.fetch(request, env, _ctx);
+    }
+
+    // Route Agent requests (Durable Objects)
     const routedResponse = await routeAgentRequest(request, env);
     if (routedResponse) {
       return routedResponse;
