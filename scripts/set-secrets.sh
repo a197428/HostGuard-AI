@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# HostGuard AI — Set Production Secrets
+# HostGuard AI — Set Production Secrets for Cloudflare Workers
 # =============================================================================
 # Usage:
 #   chmod +x scripts/set-secrets.sh
@@ -17,18 +17,29 @@ echo "🔐 Setting secrets for environment: $ENV"
 echo ""
 
 SECRETS=(
+  # Supabase
   "SUPABASE_URL"
   "SUPABASE_SERVICE_KEY"
+
+  # LLM Providers
   "ROUTERAI_API_KEY"
   "ROUTERAI_BASE_URL"
   "OPENROUTER_API_KEY"
   "AI_GATEWAY_BASE_URL"
   "DEEPSEEK_MODEL"
+
+  # Cache / Memory
   "UPSTASH_REDIS_URL"
   "UPSTASH_REDIS_TOKEN"
+
+  # Data Extraction
   "TAVILY_API_KEY"
+
+  # Notifications
   "TELEGRAM_BOT_TOKEN"
   "OWNER_TELEGRAM_ID"
+
+  # Monitoring
   "SENTRY_DSN"
   "SENTRY_ENVIRONMENT"
   "SENTRY_RELEASE"
