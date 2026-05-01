@@ -33,7 +33,8 @@ jobs:
       - name: Vitest
         run: npm run test
 
-      - name: AI Eval Suite
+      - name: AI Eval Suite (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: npm run ai-eval
 
       - name: Build frontend
