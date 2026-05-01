@@ -12,14 +12,12 @@
     "skipLibCheck": true,
     "lib": ["ES2022"],
     "types": ["@cloudflare/workers-types", "vitest/globals"],
-    "ignoreDeprecations": "5.0",
-    "baseUrl": ".",
     "paths": {
-      "@hostguard/shared": ["src/shared/index"],
-      "@hostguard/shared/*": ["src/shared/*"],
-      "@hostguard/backend": ["src/backend/index"],
-      "@hostguard/backend/*": ["src/backend/*"],
-      "@hostguard/frontend": ["src/frontend/index"]
+      "@hostguard/shared": ["./src/shared/index"],
+      "@hostguard/shared/*": ["./src/shared/*"],
+      "@hostguard/backend": ["./src/backend/index"],
+      "@hostguard/backend/*": ["./src/backend/*"],
+      "@hostguard/frontend": ["./src/frontend/index"]
     }
   },
   "include": ["src/backend/**/*.ts", "src/shared/**/*.ts", "tests/**/*.ts"],
