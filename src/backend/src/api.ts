@@ -13,6 +13,7 @@ import {
   SupabaseRepository,
 } from "../infrastructure/supabase";
 import { reportError } from "../infrastructure/observability";
+import { API_RATE_LIMITERS, rateLimitMiddleware } from "../infrastructure/rate-limiter";
 import { handleTelegramWebhook } from "../infrastructure/telegram";
 
 // =============================================================================
@@ -20,7 +21,6 @@ import { handleTelegramWebhook } from "../infrastructure/telegram";
 // =============================================================================
 
 const CreatePropertySchema = z.object({
-  owner_id: z.string().uuid(),
   name: z.string().min(1, "Property name is required"),
   address: z.string().optional(),
   features: z.record(z.unknown()).optional(),
@@ -97,6 +97,35 @@ function createRepo(env: Env): SupabaseRepository {
   return new SupabaseRepository(supabase);
 }
 
+function extractBearerToken(request: Request): string | null {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader || !authHeader.toLowerCase().startsWith("bearer ")) {
+    return null;
+  }
+  return authHeader.slice(7).trim();
+}
+
+async function getAuthenticatedOwnerId(
+  env: Env,
+  request: Request,
+): Promise<string | null> {
+  const token = extractBearerToken(request);
+  if (!token) {
+    return null;
+  }
+
+  const supabase = createSupabaseClient(
+    env.SUPABASE_URL ?? "",
+    env.SUPABASE_SERVICE_KEY ?? "",
+    { auth: { persistSession: false } },
+  );
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user?.id) {
+    return null;
+  }
+  return data.user.id;
+}
+
 async function handleApiError(
   env: Env,
   traceId: string,
@@ -131,6 +160,7 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
   // Middleware
   app.use("*", cors());
   app.use("*", logger());
+  app.use("*", rateLimitMiddleware(API_RATE_LIMITERS.general));
 
   // Health check
   app.get("/healthz", (c) => {
@@ -157,9 +187,9 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
   // GET /api/properties - List all properties for an owner
   app.get("/api/properties", async (c) => {
     try {
-      const ownerId = c.req.query("owner_id");
+      const ownerId = await getAuthenticatedOwnerId(c.env, c.req.raw);
       if (!ownerId) {
-        return c.json({ error: "owner_id query parameter is required" }, 400);
+        return c.json({ error: "Unauthorized" }, 401);
       }
 
       const repo = createRepo(c.env);
@@ -179,13 +209,21 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
   // POST /api/properties - Create a new property
   app.post("/api/properties", async (c) => {
     try {
+      const ownerId = await getAuthenticatedOwnerId(c.env, c.req.raw);
+      if (!ownerId) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
       const parsed = await parseBody(c.req.raw, CreatePropertySchema);
       if (parsed.error) {
         return c.json({ error: parsed.error }, 400);
       }
 
       const repo = createRepo(c.env);
-      const property = await repo.createProperty(parsed.data as any);
+      const property = await repo.createProperty({
+        ...(parsed.data as Record<string, unknown>),
+        owner_id: ownerId,
+      } as any);
 
       return c.json({ data: property }, 201);
     } catch (error) {

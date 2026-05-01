@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { logStructured } from "./logging";
+import { parseReviews } from "./parsers";
 
 export interface TavilyConfig {
   apiKey: string;
@@ -231,7 +232,19 @@ export class TavilyClient {
         throw new TavilyExtractionError("No content extracted from URL", url);
       }
 
-      const content = extractResult.results[0]?.content ?? "";
+      const result = extractResult.results[0];
+      const content = result?.content ?? "";
+      const rawContent = result?.rawContent ?? "";
+
+      // Пробуем распарсить через платформенный парсер (HTML)
+      const htmlContent = rawContent || content;
+      const parsed = parseReviews(htmlContent, platform, url);
+
+      if (parsed.length > 0) {
+        return parsed;
+      }
+
+      // Fallback: старый текстовый парсер
       return this.parseReviewsFromContent(content, platform, url);
     } catch (error) {
       if (error instanceof TavilyExtractionError) {

@@ -1,12 +1,16 @@
 import type { Property, Review } from "@shared/types";
+import { supabase } from "@/lib/supabase";
 
 const API_BASE =
   (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "") + "/api";
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
   const response = await fetch(`${API_BASE}${endpoint}`, {
     headers: {
       "Content-Type": "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...options?.headers,
     },
     ...options,
@@ -35,24 +39,9 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   return body as T;
 }
 
-function getOwnerId(): string | null {
-  try {
-    const parsed = JSON.parse(
-      localStorage.getItem("sb-gazkpdnagiicuumxljib-auth-token") ?? "{}",
-    );
-    return parsed?.user?.id ?? parsed?.data?.user?.id ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export const api = {
   // Properties
-  getProperties: () => {
-    const ownerId = getOwnerId();
-    const query = ownerId ? `?owner_id=${ownerId}` : "";
-    return request<Property[]>(`/properties${query}`);
-  },
+  getProperties: () => request<Property[]>("/properties"),
 
   getProperty: (id: string) => request<Property>(`/properties/${id}`),
 

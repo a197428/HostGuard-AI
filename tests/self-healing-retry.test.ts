@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   DeepSeekClient,
   type LLMCallOptions,
@@ -9,6 +9,7 @@ import {
   type ReviewAnalysisContext,
 } from "../src/backend/agents/monitor";
 import { MockRedisRepository } from "../src/backend/infrastructure/redis";
+import { TavilyClient } from "../src/backend/infrastructure/tavily";
 
 function createMockFetch(responses: Array<string>): typeof fetch {
   let index = 0;
@@ -85,9 +86,24 @@ describe("Self-healing retry", () => {
       ]),
     });
 
+    // Mock Tavily to return a review so the pipeline processes it
+    const mockTavily = {
+      extractReviewsFromUrl: vi.fn().mockResolvedValue([
+        {
+          text: "Тестовый отзыв",
+          platform: "avito" as const,
+          platformReviewId: "retry_case_001",
+          rating: 1,
+          reviewDate: "2026-04-30T00:00:00Z",
+          url: "https://avito.ru/test",
+        },
+      ]),
+    } as unknown as TavilyClient;
+
     const service = createMockMonitorAgentService(config, {
       redis: new MockRedisRepository(),
       llm,
+      tavily: mockTavily,
     });
 
     const context: ReviewAnalysisContext = {
@@ -96,6 +112,7 @@ describe("Self-healing retry", () => {
       platformReviewId: "retry_case_001",
       rating: 1,
       reviewDate: "2026-04-30T00:00:00Z",
+      propertyUrl: "https://avito.ru/test",
     };
 
     const result = await service.execute(context);

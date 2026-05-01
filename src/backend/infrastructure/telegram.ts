@@ -48,6 +48,14 @@ export const CALLBACK_DATA = {
   REJECT: "review_reject",
 } as const;
 
+function maskTelegramId(value: number): string {
+  const digits = String(value);
+  if (digits.length <= 2) {
+    return "**";
+  }
+  return `***${digits.slice(-2)}`;
+}
+
 // =============================================================================
 // PII Masking (расширенная версия для Telegram)
 // =============================================================================
@@ -235,7 +243,10 @@ export function createTelegramBot(env: Env): Bot<Context> | null {
       owner_id: "system",
       property_id: "system",
       message: "User started bot",
-      data: { telegram_id: telegramId },
+      data: {
+        telegram_id_masked:
+          typeof telegramId === "number" ? maskTelegramId(telegramId) : null,
+      },
     });
   });
 
@@ -256,6 +267,10 @@ export function createTelegramBot(env: Env): Bot<Context> | null {
         `❌ Отклонить — отклонить черновик`,
       { parse_mode: "Markdown" },
     );
+  });
+
+  bot.on("callback_query:data", async (ctx) => {
+    await handleCallbackQuery(ctx, env);
   });
 
   return bot;
@@ -365,7 +380,7 @@ export async function handleCallbackQuery(
       data: {
         review_id: reviewId,
         decision,
-        telegram_id: telegramId,
+        telegram_id_masked: maskTelegramId(telegramId),
       },
     });
   } catch (error) {
@@ -435,7 +450,7 @@ export async function sendReviewAlert(
       message: "Alert sent to Telegram",
       data: {
         review_id: payload.reviewId,
-        owner_telegram_id: ownerTelegramId,
+        owner_telegram_id_masked: maskTelegramId(ownerTelegramId),
         platform: payload.platform,
         rating: payload.rating,
         has_appeal: Boolean(payload.appealText),
@@ -457,7 +472,7 @@ export async function sendReviewAlert(
         message: "Failed to send Telegram alert",
         data: {
           review_id: payload.reviewId,
-          owner_telegram_id: ownerTelegramId,
+          owner_telegram_id_masked: maskTelegramId(ownerTelegramId),
         },
       },
       error,

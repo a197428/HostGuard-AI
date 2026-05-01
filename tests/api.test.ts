@@ -47,6 +47,12 @@ vi.mock("../src/backend/infrastructure/supabase", () => {
 
   const mockSupabaseClient = {
     from: vi.fn().mockReturnValue(mockQueryBuilder),
+    auth: {
+      getUser: vi.fn().mockResolvedValue({
+        data: { user: { id: "00000000-0000-0000-0000-000000000000" } },
+        error: null,
+      }),
+    },
   };
 
   return {
@@ -80,6 +86,10 @@ describe("API Router", () => {
     env = createMockEnv();
   });
 
+  const authHeaders = {
+    authorization: "Bearer test-token",
+  };
+
   describe("GET /healthz", () => {
     it("should return health check response", async () => {
       const request = new Request("http://localhost/healthz");
@@ -93,19 +103,19 @@ describe("API Router", () => {
   });
 
   describe("GET /api/properties", () => {
-    it("should return 400 when owner_id is missing", async () => {
+    it("should return 401 when auth token is missing", async () => {
       const request = new Request("http://localhost/api/properties");
       const response = await router.fetch(request, env, {} as ExecutionContext);
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(401);
       const body = await response.json();
       expect(body).toHaveProperty("error");
     });
 
     it("should return 500 when Supabase is not configured", async () => {
-      const request = new Request(
-        "http://localhost/api/properties?owner_id=00000000-0000-0000-0000-000000000000",
-      );
+      const request = new Request("http://localhost/api/properties", {
+        headers: authHeaders,
+      });
       const response = await router.fetch(request, env, {} as ExecutionContext);
 
       expect(response.status).toBe(500);
@@ -115,11 +125,24 @@ describe("API Router", () => {
   });
 
   describe("POST /api/properties", () => {
+    it("should return 401 when auth token is missing", async () => {
+      const request = new Request("http://localhost/api/properties", {
+        method: "POST",
+        body: JSON.stringify({ name: "Property without auth" }),
+        headers: { "content-type": "application/json" },
+      });
+      const response = await router.fetch(request, env, {} as ExecutionContext);
+
+      expect(response.status).toBe(401);
+      const body = await response.json();
+      expect(body).toHaveProperty("error");
+    });
+
     it("should return 400 for invalid JSON body", async () => {
       const request = new Request("http://localhost/api/properties", {
         method: "POST",
         body: "invalid json",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...authHeaders },
       });
       const response = await router.fetch(request, env, {} as ExecutionContext);
 
@@ -132,7 +155,7 @@ describe("API Router", () => {
       const request = new Request("http://localhost/api/properties", {
         method: "POST",
         body: JSON.stringify({}),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...authHeaders },
       });
       const response = await router.fetch(request, env, {} as ExecutionContext);
 
@@ -141,14 +164,13 @@ describe("API Router", () => {
       expect(body).toHaveProperty("error");
     });
 
-    it("should return 400 for invalid owner_id", async () => {
+    it("should return 400 for invalid property payload", async () => {
       const request = new Request("http://localhost/api/properties", {
         method: "POST",
         body: JSON.stringify({
-          owner_id: "not-a-uuid",
-          name: "Test Property",
+          name: "",
         }),
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...authHeaders },
       });
       const response = await router.fetch(request, env, {} as ExecutionContext);
 

@@ -5,6 +5,7 @@
 
 import { logStructured } from "./logging";
 import type { ScrapedReview } from "./tavily";
+import { parseReviews } from "./parsers";
 
 export interface BrowserRenderingConfig {
   binding: Fetcher;
@@ -104,6 +105,14 @@ export class BrowserRenderingClient {
   ): Promise<ScrapedReview[]> {
     try {
       const result = await this.fetchPage(url);
+
+      // Пробуем распарсить через платформенный парсер (HTML)
+      const parsed = parseReviews(result.content, platform, url);
+      if (parsed.length > 0) {
+        return parsed;
+      }
+
+      // Fallback: старый текстовый парсер
       return this.parseReviewsFromHtml(result.content, platform, url);
     } catch (error) {
       logStructured("error", {

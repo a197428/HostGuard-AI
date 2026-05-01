@@ -31,6 +31,10 @@ preview_id = "e24e87f45e2d4b1e9dce03fa98966ccd"
 [observability]
 enabled = true
 
+# Cron Trigger — периодический мониторинг каждые 30 минут
+[[triggers]]
+crons = ["*/30 * * * *"]
+
 # =============================================================================
 # Secrets (set via `npx wrangler secret put`):
 #   SUPABASE_URL, SUPABASE_SERVICE_KEY
