@@ -10,8 +10,8 @@ import { logStructured } from "./logging";
 // =============================================================================
 
 export interface RateLimiterConfig {
-  windowMs: number;       // Time window in milliseconds
-  maxRequests: number;    // Max requests per window
+  windowMs: number; // Time window in milliseconds
+  maxRequests: number; // Max requests per window
   burstMaxRequests?: number; // Optional burst limit (higher than maxRequests)
 }
 
@@ -40,7 +40,11 @@ export class InMemoryRateLimiter {
   ) {
     if (typeof globalThis !== "undefined") {
       this.cleanupInterval = setInterval(() => this.cleanup(), this.cleanupMs);
-      if (this.cleanupInterval && typeof this.cleanupInterval === "object" && "unref" in this.cleanupInterval) {
+      if (
+        this.cleanupInterval &&
+        typeof this.cleanupInterval === "object" &&
+        "unref" in this.cleanupInterval
+      ) {
         (this.cleanupInterval as unknown as { unref: () => void }).unref();
       }
     }
@@ -174,7 +178,10 @@ export function rateLimitMiddleware(
   limiter: InMemoryRateLimiter,
   keyPrefix = "api",
 ) {
-  return async (c: Context<{ Bindings: Env }>, next: Next): Promise<Response | void> => {
+  return async (
+    c: Context<{ Bindings: Env }>,
+    next: Next,
+  ): Promise<Response | void> => {
     // Skip rate limiting for health checks
     const url = new URL(c.req.url);
     if (url.pathname === "/healthz" || url.pathname === "/api/healthz") {
@@ -182,9 +189,14 @@ export function rateLimitMiddleware(
     }
 
     // Build rate limit key from IP or user ID
-    const ip = c.req.header("cf-connecting-ip") ?? c.req.header("x-forwarded-for") ?? "unknown";
+    const ip =
+      c.req.header("cf-connecting-ip") ??
+      c.req.header("x-forwarded-for") ??
+      "unknown";
     const authHeader = c.req.header("authorization");
-    const userId = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).slice(0, 12) : "anon";
+    const userId = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7).slice(0, 12)
+      : "anon";
     const key = `${keyPrefix}:${userId}:${ip}`;
 
     const result = limiter.check(key);

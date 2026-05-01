@@ -10,8 +10,8 @@ import { logStructured } from "./logging";
 // =============================================================================
 
 export interface CircuitBreakerConfig {
-  threshold: number;       // Number of failures before opening
-  resetTimeoutMs: number;  // Time before attempting half-open
+  threshold: number; // Number of failures before opening
+  resetTimeoutMs: number; // Time before attempting half-open
   halfOpenMaxRequests: number; // Max requests in half-open state
 }
 
@@ -305,9 +305,7 @@ function isRetryable(
   retryableErrors: Array<new (...args: unknown[]) => Error>,
 ): boolean {
   if (retryableErrors.length === 0) return true;
-  return retryableErrors.some(
-    (ErrorType) => error instanceof ErrorType,
-  );
+  return retryableErrors.some((ErrorType) => error instanceof ErrorType);
 }
 
 function sleep(ms: number): Promise<void> {
@@ -384,17 +382,29 @@ export interface ResilienceRegistryConfig {
 
 export const DEFAULT_RESILIENCE_CONFIG: ResilienceRegistryConfig = {
   tavily: {
-    circuitBreaker: { threshold: 5, resetTimeoutMs: 30_000, halfOpenMaxRequests: 3 },
+    circuitBreaker: {
+      threshold: 5,
+      resetTimeoutMs: 30_000,
+      halfOpenMaxRequests: 3,
+    },
     bulkhead: { maxConcurrent: 3, maxQueue: 10 },
     timeoutMs: 15_000,
   },
   browserRendering: {
-    circuitBreaker: { threshold: 3, resetTimeoutMs: 60_000, halfOpenMaxRequests: 2 },
+    circuitBreaker: {
+      threshold: 3,
+      resetTimeoutMs: 60_000,
+      halfOpenMaxRequests: 2,
+    },
     bulkhead: { maxConcurrent: 2, maxQueue: 5 },
     timeoutMs: 30_000,
   },
   llm: {
-    circuitBreaker: { threshold: 10, resetTimeoutMs: 60_000, halfOpenMaxRequests: 2 },
+    circuitBreaker: {
+      threshold: 10,
+      resetTimeoutMs: 60_000,
+      halfOpenMaxRequests: 2,
+    },
     bulkhead: { maxConcurrent: 2, maxQueue: 20 },
     timeoutMs: 30_000,
   },
@@ -423,16 +433,37 @@ export class ResilienceRegistry {
   readonly redisTimeoutMs: number;
 
   constructor(config: ResilienceRegistryConfig = DEFAULT_RESILIENCE_CONFIG) {
-    this.tavilyCircuitBreaker = new CircuitBreaker("tavily", config.tavily.circuitBreaker);
-    this.tavilyBulkhead = new Bulkhead("tavily", config.tavily.bulkhead.maxConcurrent, config.tavily.bulkhead.maxQueue);
+    this.tavilyCircuitBreaker = new CircuitBreaker(
+      "tavily",
+      config.tavily.circuitBreaker,
+    );
+    this.tavilyBulkhead = new Bulkhead(
+      "tavily",
+      config.tavily.bulkhead.maxConcurrent,
+      config.tavily.bulkhead.maxQueue,
+    );
     this.tavilyTimeoutMs = config.tavily.timeoutMs;
 
-    this.browserRenderingCircuitBreaker = new CircuitBreaker("browser-rendering", config.browserRendering.circuitBreaker);
-    this.browserRenderingBulkhead = new Bulkhead("browser-rendering", config.browserRendering.bulkhead.maxConcurrent, config.browserRendering.bulkhead.maxQueue);
+    this.browserRenderingCircuitBreaker = new CircuitBreaker(
+      "browser-rendering",
+      config.browserRendering.circuitBreaker,
+    );
+    this.browserRenderingBulkhead = new Bulkhead(
+      "browser-rendering",
+      config.browserRendering.bulkhead.maxConcurrent,
+      config.browserRendering.bulkhead.maxQueue,
+    );
     this.browserRenderingTimeoutMs = config.browserRendering.timeoutMs;
 
-    this.llmCircuitBreaker = new CircuitBreaker("llm", config.llm.circuitBreaker);
-    this.llmBulkhead = new Bulkhead("llm", config.llm.bulkhead.maxConcurrent, config.llm.bulkhead.maxQueue);
+    this.llmCircuitBreaker = new CircuitBreaker(
+      "llm",
+      config.llm.circuitBreaker,
+    );
+    this.llmBulkhead = new Bulkhead(
+      "llm",
+      config.llm.bulkhead.maxConcurrent,
+      config.llm.bulkhead.maxQueue,
+    );
     this.llmTimeoutMs = config.llm.timeoutMs;
 
     this.supabaseTimeoutMs = config.supabase.timeoutMs;

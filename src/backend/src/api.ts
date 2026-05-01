@@ -13,7 +13,10 @@ import {
   SupabaseRepository,
 } from "../infrastructure/supabase";
 import { reportError } from "../infrastructure/observability";
-import { API_RATE_LIMITERS, rateLimitMiddleware } from "../infrastructure/rate-limiter";
+import {
+  API_RATE_LIMITERS,
+  rateLimitMiddleware,
+} from "../infrastructure/rate-limiter";
 import { handleTelegramWebhook } from "../infrastructure/telegram";
 
 // =============================================================================
