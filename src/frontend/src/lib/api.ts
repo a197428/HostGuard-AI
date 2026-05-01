@@ -1,6 +1,7 @@
 import type { Property, Review } from "@shared/types";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "") + "/api";
+const API_BASE =
+  (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "") + "/api";
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
