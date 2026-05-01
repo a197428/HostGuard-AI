@@ -18,5 +18,6 @@
     "baseUrl": ".",
     "ignoreDeprecations": "6.0"
   },
-  "include": ["src/**/*.ts", "src/**/*.vue", "env.d.ts"]
+  "include": ["src/**/*.ts", "src/**/*.vue", "env.d.ts"],
+  "exclude": ["e2e/**/*", "node_modules", "dist"]
 }
