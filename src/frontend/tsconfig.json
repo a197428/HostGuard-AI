@@ -9,14 +9,14 @@
     "moduleResolution": "bundler",
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
     "jsx": "preserve",
     "paths": {
       "@/*": ["./src/*"],
       "@shared/*": ["../shared/*"],
       "@shared": ["../shared/index.ts"]
     },
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0"
+    "baseUrl": "."
   },
   "include": ["src/**/*.ts", "src/**/*.vue", "env.d.ts"],
   "exclude": ["e2e/**/*", "node_modules", "dist"]

@@ -51,10 +51,7 @@ const statusLabels: Record<string, string> = {
           {{ formatDate(review.created_at) }}
         </span>
       </div>
-      <SentimentBadge
-        :sentiment="review.sentiment"
-        :rating="review.rating"
-      />
+      <SentimentBadge :sentiment="review.sentiment" :rating="review.rating" />
     </div>
 
     <p class="text-sm text-gray-700 mb-2">

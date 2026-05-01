@@ -15,7 +15,7 @@ const filterStatus = ref<string>("all");
 import { ref } from "vue";
 
 onMounted(async () => {
-  await Promise.all([store.fetchProperties(), store.fetchReviews()]);
+  await store.fetchReviews();
 });
 
 const filteredReviews = computed(() => {
@@ -172,7 +172,8 @@ function goToReview(id: string) {
           :negative-count="
             store.reviewsByProperty
               .get(property.id)
-              ?.filter((r) => r.sentiment === 'negative' || r.rating < 4).length ?? 0
+              ?.filter((r) => r.sentiment === 'negative' || r.rating < 4)
+              .length ?? 0
           "
           @click="goToProperty"
         />

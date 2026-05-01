@@ -68,9 +68,7 @@ function goBack() {
       </div>
 
       <!-- Reviews -->
-      <h2 class="text-base font-semibold text-gray-900 mb-3">
-        Отзывы
-      </h2>
+      <h2 class="text-base font-semibold text-gray-900 mb-3">Отзывы</h2>
       <ReviewList
         :reviews="propertyReviews"
         :loading="store.loading"

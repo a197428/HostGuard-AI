@@ -13,7 +13,7 @@ const store = useReviewStore();
 
 const reviewId = route.params.id as string;
 
-const review = computed(() => store.currentReview);
+const review = computed(() => store.currentReview.value);
 
 onMounted(async () => {
   await store.fetchReview(reviewId);
@@ -23,25 +23,65 @@ function goBack() {
   router.push("/");
 }
 
-async function handleApprove(id: string) {
+async function handleApprove(payload: {
+  reviewId: string;
+  status: "approved" | "appeal_sent";
+  public_response_edited?: string;
+  appeal_text?: string;
+  appeal_confidence?: number;
+  legal_grounds?: unknown[];
+}) {
   try {
-    await store.approveAppeal(id);
+    await store.updateReview(payload.reviewId, {
+      status: payload.status,
+      public_response_edited: payload.public_response_edited,
+      appeal_text: payload.appeal_text,
+      appeal_confidence: payload.appeal_confidence,
+      legal_grounds: payload.legal_grounds,
+    });
   } catch {
     // Error is handled in store
   }
 }
 
-async function handleReject(id: string) {
+async function handleReject(payload: {
+  reviewId: string;
+  status: "rejected";
+  public_response_edited?: string;
+  appeal_text?: string;
+  appeal_confidence?: number;
+  legal_grounds?: unknown[];
+}) {
   try {
-    await store.rejectAppeal(id);
+    await store.updateReview(payload.reviewId, {
+      status: payload.status,
+      public_response_edited: payload.public_response_edited,
+      appeal_text: payload.appeal_text,
+      appeal_confidence: payload.appeal_confidence,
+      legal_grounds: payload.legal_grounds,
+    });
   } catch {
     // Error is handled in store
   }
 }
 
-async function handleRequestRevision(id: string, feedback: string) {
+async function handleRequestRevision(payload: {
+  reviewId: string;
+  status: "draft_ready" | "edited";
+  public_response_edited?: string;
+  appeal_text?: string;
+  appeal_confidence?: number;
+  legal_grounds?: unknown[];
+  feedback: string;
+}) {
   try {
-    await store.requestRevision(id, feedback);
+    await store.updateReview(payload.reviewId, {
+      status: payload.status,
+      public_response_edited: payload.public_response_edited,
+      appeal_text: payload.appeal_text,
+      appeal_confidence: payload.appeal_confidence,
+      legal_grounds: payload.legal_grounds,
+    });
   } catch {
     // Error is handled in store
   }
@@ -109,9 +149,7 @@ function formatDate(dateStr?: string): string {
                 :key="star"
                 class="text-lg"
                 :class="
-                  star <= review.rating
-                    ? 'text-yellow-400'
-                    : 'text-gray-200'
+                  star <= review.rating ? 'text-yellow-400' : 'text-gray-200'
                 "
               >
                 ★

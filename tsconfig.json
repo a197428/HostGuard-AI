@@ -9,10 +9,10 @@
     "moduleResolution": "bundler",
     "esModuleInterop": true,
     "experimentalDecorators": true,
-    "ignoreDeprecations": "6.0",
     "skipLibCheck": true,
     "lib": ["ES2022"],
     "types": ["@cloudflare/workers-types", "vitest/globals"],
+    "ignoreDeprecations": "5.0",
     "baseUrl": ".",
     "paths": {
       "@hostguard/shared": ["src/shared/index"],
@@ -22,6 +22,6 @@
       "@hostguard/frontend": ["src/frontend/index"]
     }
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["node_modules", "dist", ".wrangler"]
+  "include": ["src/backend/**/*.ts", "src/shared/**/*.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules", "dist", ".wrangler", "src/frontend"]
 }

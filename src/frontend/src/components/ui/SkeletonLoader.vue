@@ -9,7 +9,7 @@ const defaultLines = 3;
 <template>
   <div class="space-y-3 p-4">
     <div
-      v-for="i in (lines ?? defaultLines)"
+      v-for="i in lines ?? defaultLines"
       :key="i"
       class="skeleton h-4"
       :style="{ width: `${80 - i * 10}%` }"

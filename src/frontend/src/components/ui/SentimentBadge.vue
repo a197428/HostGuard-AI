@@ -13,10 +13,16 @@ const labelMap: Record<string, string> = {
 };
 
 function getBadgeClass(): string {
-  if (props.sentiment === "negative" || (props.rating !== undefined && props.rating !== null && props.rating < 4)) {
+  if (
+    props.sentiment === "negative" ||
+    (props.rating !== undefined && props.rating !== null && props.rating < 4)
+  ) {
     return "badge-negative";
   }
-  if (props.sentiment === "positive" || (props.rating !== undefined && props.rating !== null && props.rating >= 4)) {
+  if (
+    props.sentiment === "positive" ||
+    (props.rating !== undefined && props.rating !== null && props.rating >= 4)
+  ) {
     return "badge-positive";
   }
   return "badge-neutral";

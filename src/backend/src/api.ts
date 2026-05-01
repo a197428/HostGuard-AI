@@ -12,7 +12,7 @@ import {
   createSupabaseClient,
   SupabaseRepository,
 } from "../infrastructure/supabase";
-import { logStructured } from "../infrastructure/logging";
+import { reportError } from "../infrastructure/observability";
 import { handleTelegramWebhook } from "../infrastructure/telegram";
 
 // =============================================================================
@@ -57,6 +57,9 @@ const UpdateReviewSchema = z.object({
     ])
     .optional(),
   public_response_edited: z.string().optional(),
+  appeal_text: z.string().optional(),
+  appeal_confidence: z.number().min(0).max(1).optional(),
+  legal_grounds: z.array(z.unknown()).optional(),
 });
 
 // =============================================================================
@@ -66,7 +69,9 @@ const UpdateReviewSchema = z.object({
 async function parseBody<T>(
   request: Request,
   schema: z.ZodSchema<T>,
-): Promise<{ data: T; error?: undefined } | { data?: undefined; error: string }> {
+): Promise<
+  { data: T; error?: undefined } | { data?: undefined; error: string }
+> {
   try {
     const body = await request.json();
     const result = schema.safeParse(body);
@@ -92,6 +97,30 @@ function createRepo(env: Env): SupabaseRepository {
   return new SupabaseRepository(supabase);
 }
 
+async function handleApiError(
+  env: Env,
+  traceId: string,
+  message: string,
+  error: unknown,
+): Promise<Response> {
+  await reportError(
+    env,
+    {
+      trace_id: traceId,
+      owner_id: "system",
+      property_id: "system",
+      message,
+    },
+    error,
+  );
+  return new Response(JSON.stringify({ error: message }), {
+    status: 500,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+    },
+  });
+}
+
 // =============================================================================
 // API Router
 // =============================================================================
@@ -105,6 +134,15 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
 
   // Health check
   app.get("/healthz", (c) => {
+    return c.json({
+      ok: true,
+      service: "hostguard-ai-backend",
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Also respond to /api/healthz when mounted under /api/
+  app.get("/api/healthz", (c) => {
     return c.json({
       ok: true,
       service: "hostguard-ai-backend",
@@ -129,14 +167,12 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
 
       return c.json({ data: properties });
     } catch (error) {
-      logStructured("error", {
-        trace_id: `api_${Date.now()}`,
-        owner_id: "system",
-        property_id: "system",
-        message: "Failed to list properties",
-        data: { error: error instanceof Error ? error.message : "Unknown" },
-      });
-      return c.json({ error: "Failed to list properties" }, 500);
+      return handleApiError(
+        c.env,
+        `api_${Date.now()}`,
+        "Failed to list properties",
+        error,
+      );
     }
   });
 
@@ -153,14 +189,12 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
 
       return c.json({ data: property }, 201);
     } catch (error) {
-      logStructured("error", {
-        trace_id: `api_${Date.now()}`,
-        owner_id: "system",
-        property_id: "system",
-        message: "Failed to create property",
-        data: { error: error instanceof Error ? error.message : "Unknown" },
-      });
-      return c.json({ error: "Failed to create property" }, 500);
+      return handleApiError(
+        c.env,
+        `api_${Date.now()}`,
+        "Failed to create property",
+        error,
+      );
     }
   });
 
@@ -177,14 +211,12 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
 
       return c.json({ data: property });
     } catch (error) {
-      logStructured("error", {
-        trace_id: `api_${Date.now()}`,
-        owner_id: "system",
-        property_id: "system",
-        message: "Failed to get property",
-        data: { error: error instanceof Error ? error.message : "Unknown" },
-      });
-      return c.json({ error: "Failed to get property" }, 500);
+      return handleApiError(
+        c.env,
+        `api_${Date.now()}`,
+        "Failed to get property",
+        error,
+      );
     }
   });
 
@@ -202,14 +234,12 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
 
       return c.json({ data: property });
     } catch (error) {
-      logStructured("error", {
-        trace_id: `api_${Date.now()}`,
-        owner_id: "system",
-        property_id: "system",
-        message: "Failed to update property",
-        data: { error: error instanceof Error ? error.message : "Unknown" },
-      });
-      return c.json({ error: "Failed to update property" }, 500);
+      return handleApiError(
+        c.env,
+        `api_${Date.now()}`,
+        "Failed to update property",
+        error,
+      );
     }
   });
 
@@ -225,14 +255,12 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
 
       return c.json({ success: true });
     } catch (error) {
-      logStructured("error", {
-        trace_id: `api_${Date.now()}`,
-        owner_id: "system",
-        property_id: "system",
-        message: "Failed to delete property",
-        data: { error: error instanceof Error ? error.message : "Unknown" },
-      });
-      return c.json({ error: "Failed to delete property" }, 500);
+      return handleApiError(
+        c.env,
+        `api_${Date.now()}`,
+        "Failed to delete property",
+        error,
+      );
     }
   });
 
@@ -249,14 +277,12 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
 
       return c.json({ data: urls });
     } catch (error) {
-      logStructured("error", {
-        trace_id: `api_${Date.now()}`,
-        owner_id: "system",
-        property_id: "system",
-        message: "Failed to list property URLs",
-        data: { error: error instanceof Error ? error.message : "Unknown" },
-      });
-      return c.json({ error: "Failed to list property URLs" }, 500);
+      return handleApiError(
+        c.env,
+        `api_${Date.now()}`,
+        "Failed to list property URLs",
+        error,
+      );
     }
   });
 
@@ -278,14 +304,12 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
 
       return c.json({ data: url }, 201);
     } catch (error) {
-      logStructured("error", {
-        trace_id: `api_${Date.now()}`,
-        owner_id: "system",
-        property_id: "system",
-        message: "Failed to create property URL",
-        data: { error: error instanceof Error ? error.message : "Unknown" },
-      });
-      return c.json({ error: "Failed to create property URL" }, 500);
+      return handleApiError(
+        c.env,
+        `api_${Date.now()}`,
+        "Failed to create property URL",
+        error,
+      );
     }
   });
 
@@ -302,14 +326,12 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
 
       return c.json({ data: reviews });
     } catch (error) {
-      logStructured("error", {
-        trace_id: `api_${Date.now()}`,
-        owner_id: "system",
-        property_id: "system",
-        message: "Failed to list reviews",
-        data: { error: error instanceof Error ? error.message : "Unknown" },
-      });
-      return c.json({ error: "Failed to list reviews" }, 500);
+      return handleApiError(
+        c.env,
+        `api_${Date.now()}`,
+        "Failed to list reviews",
+        error,
+      );
     }
   });
 
@@ -335,14 +357,12 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
 
       return c.json({ data });
     } catch (error) {
-      logStructured("error", {
-        trace_id: `api_${Date.now()}`,
-        owner_id: "system",
-        property_id: "system",
-        message: "Failed to get review",
-        data: { error: error instanceof Error ? error.message : "Unknown" },
-      });
-      return c.json({ error: "Failed to get review" }, 500);
+      return handleApiError(
+        c.env,
+        `api_${Date.now()}`,
+        "Failed to get review",
+        error,
+      );
     }
   });
 
@@ -360,14 +380,12 @@ export function createApiRouter(): Hono<{ Bindings: Env }> {
 
       return c.json({ data: review });
     } catch (error) {
-      logStructured("error", {
-        trace_id: `api_${Date.now()}`,
-        owner_id: "system",
-        property_id: "system",
-        message: "Failed to update review",
-        data: { error: error instanceof Error ? error.message : "Unknown" },
-      });
-      return c.json({ error: "Failed to update review" }, 500);
+      return handleApiError(
+        c.env,
+        `api_${Date.now()}`,
+        "Failed to update review",
+        error,
+      );
     }
   });
 

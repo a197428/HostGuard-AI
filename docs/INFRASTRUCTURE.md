@@ -34,8 +34,20 @@
 | Type Check | Strict mode для всего монорепо | `tsc --noEmit` | < 2 мин |
 | Unit & Integration | Бизнес-логика + Workers эмуляция | Vitest + Miniflare | < 5 мин |
 | Security Scan | Зависимости и секреты в истории | Trivy + Gitleaks | < 3 мин |
-| AI Eval Suite | Прогон Golden Set (50+ кейсов) через DeepSeek | LLM-as-Judge | < 10 мин |
+| AI Eval Suite | Прогон Golden Set (50 кейсов) и gate по Faithfulness/Safety | Vitest + Mock LLM | < 10 мин |
 | Build | Сборка фронтенда, валидация Workers | Vite + Wrangler | < 5 мин |
+
+### 2.2.1 CI Gate
+
+Последовательность в GitHub Actions фиксирована:
+
+1. `Lint`
+2. `TypeCheck`
+3. `Vitest`
+4. `AI Eval Suite`
+5. `Deploy to Cloudflare`
+
+Production deploy блокируется, если `Faithfulness < 0.85` или `Safety < 0.95`.
 
 ### 2.3 CD Pipeline
 
@@ -127,6 +139,12 @@ SQL-миграции в репозитории:
 | Горячие логи | Cloudflare Logpush, 14 дней |
 | Архив | R2, 90 дней |
 | Audit Log | Supabase `llm_calls`, 12 месяцев |
+
+### 5.1.1 Sentry и AI Gateway
+
+- Ошибки Workers и orchestration-кода отправляются в Sentry, если задан `SENTRY_DSN`.
+- LLM-запросы проходят с заголовками `cf-aig-collect-log` и `cf-aig-collect-log-payload: false`, чтобы сохранять метаданные в AI Gateway без утечки PII.
+- `trace_id` синхронизируется между структурированными логами, Sentry и LLM-аудитом.
 
 ### 5.2 Метрики (RED + USE)
 

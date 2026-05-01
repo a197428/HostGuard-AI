@@ -17,10 +17,7 @@ const emit = defineEmits<{
 <template>
   <div class="space-y-3">
     <!-- Error State -->
-    <div
-      v-if="error"
-      class="card p-4 text-center text-red-600 text-sm"
-    >
+    <div v-if="error" class="card p-4 text-center text-red-600 text-sm">
       {{ error }}
     </div>
 

@@ -1,7 +1,8 @@
 # HostGuard AI - Cloudflare Workers Configuration
 name = "hostguard-ai"
-compatibility_date = "2024-01-01"
-node_compat = false
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+main = "src/backend/src/index.ts"
 
 [durable_objects]
 bindings = [
@@ -15,31 +16,28 @@ new_sqlite_classes = ["MonitorAgent"]
 [env.production]
 name = "hostguard-ai-prod"
 
-[[observability.logs]]
-enabled = true
-destination = "null"
+[[env.production.durable_objects.bindings]]
+name = "MonitorAgent"
+class_name = "MonitorAgent"
 
-[ai]
+[env.production.ai]
 binding = "AI_GATEWAY"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "hostguard"
-database_id = "" # Set via wrangler secrets
-
-[[ratelimits]]
-binding = "RATE_LIMIT"
-namespace_id = "" # Set via wrangler secrets
-
-[[kv_namespaces]]
+[[env.production.kv_namespaces]]
 binding = "CACHE"
-id = "" # Set via wrangler secrets
+id = "e24e87f45e2d4b1e9dce03fa98966ccd"
+preview_id = "e24e87f45e2d4b1e9dce03fa98966ccd"
 
-# Browser Rendering binding (fallback for Tavily)
-[browser_rendering]
-binding = "BROWSER_RENDERING"
+[observability]
+enabled = true
 
-# Telegram Bot configuration
-# TELEGRAM_BOT_TOKEN and OWNER_TELEGRAM_ID should be set via wrangler secrets:
-# wrangler secret put TELEGRAM_BOT_TOKEN
-# wrangler secret put OWNER_TELEGRAM_ID
+# =============================================================================
+# Secrets (set via `npx wrangler secret put`):
+#   SUPABASE_URL, SUPABASE_SERVICE_KEY
+#   ROUTERAI_API_KEY, OPENROUTER_API_KEY
+#   ROUTERAI_BASE_URL, AI_GATEWAY_BASE_URL, DEEPSEEK_MODEL
+#   UPSTASH_REDIS_URL, UPSTASH_REDIS_TOKEN
+#   TAVILY_API_KEY
+#   TELEGRAM_BOT_TOKEN, OWNER_TELEGRAM_ID
+#   SENTRY_DSN, SENTRY_ENVIRONMENT, SENTRY_RELEASE
+# =============================================================================

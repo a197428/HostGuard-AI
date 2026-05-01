@@ -78,8 +78,7 @@ describe("PII Masking for Telegram", () => {
   });
 
   it("should mask multiple PII occurrences", () => {
-    const text =
-      "Иван Иванов: тел. +79001234567, email ivan@test.com";
+    const text = "Иван Иванов: тел. +79001234567, email ivan@test.com";
     const masked = maskPIIForTelegram(text);
     expect(masked).toContain("[NAME]");
     expect(masked).toContain("[PHONE]");

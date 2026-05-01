@@ -118,7 +118,8 @@ export const PROMPTS = {
       replacement: "[EMAIL]",
     },
     name: {
-      pattern: /(?:^|[\s,;:.!?("-])([А-Я][а-я]+\s+[А-Я][а-я]+)(?=[\s,;:.!?")-]|$)/g,
+      pattern:
+        /(^|[\s,;:.!?("-])([А-Я][а-я]+\s+[А-Я][а-я]+)(?=[\s,;:.!?")-]|$)/g,
       replacement: "$1[NAME]",
     },
   },

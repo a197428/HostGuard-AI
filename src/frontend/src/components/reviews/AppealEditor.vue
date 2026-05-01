@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import type { Review } from "@shared/types";
 import ConfidenceIndicator from "@/components/ui/ConfidenceIndicator.vue";
 
@@ -7,10 +7,23 @@ const props = defineProps<{
   review: Review;
 }>();
 
+type ReviewUpdatePayload = {
+  reviewId: string;
+  status: Review["status"];
+  public_response_edited?: string;
+  appeal_text?: string;
+  appeal_confidence?: number;
+  legal_grounds?: unknown[];
+};
+
+type ReviewRevisionPayload = ReviewUpdatePayload & {
+  feedback: string;
+};
+
 const emit = defineEmits<{
-  approve: [reviewId: string];
-  reject: [reviewId: string];
-  requestRevision: [reviewId: string, feedback: string];
+  approve: [payload: ReviewUpdatePayload];
+  reject: [payload: ReviewUpdatePayload];
+  requestRevision: [payload: ReviewRevisionPayload];
 }>();
 
 const activeTab = ref<"response" | "appeal">("response");
@@ -34,17 +47,48 @@ const sourceLabels: Record<string, string> = {
   uk_rf: "УК РФ",
 };
 
+watch(
+  () => props.review,
+  (review) => {
+    editedResponse.value = review.public_response ?? "";
+    editedAppeal.value = review.appeal_text ?? "";
+  },
+  { immediate: true },
+);
+
 function handleApprove() {
-  emit("approve", props.review.id);
+  emit("approve", {
+    reviewId: props.review.id,
+    status: activeTab.value === "appeal" ? "appeal_sent" : "approved",
+    public_response_edited: editedResponse.value || undefined,
+    appeal_text: editedAppeal.value || undefined,
+    appeal_confidence: props.review.appeal_confidence ?? undefined,
+    legal_grounds: legalGrounds.value,
+  });
 }
 
 function handleReject() {
-  emit("reject", props.review.id);
+  emit("reject", {
+    reviewId: props.review.id,
+    status: "rejected",
+    public_response_edited: editedResponse.value || undefined,
+    appeal_text: editedAppeal.value || undefined,
+    appeal_confidence: props.review.appeal_confidence ?? undefined,
+    legal_grounds: legalGrounds.value,
+  });
 }
 
 function handleRequestRevision() {
   if (revisionFeedback.value.trim()) {
-    emit("requestRevision", props.review.id, revisionFeedback.value);
+    emit("requestRevision", {
+      reviewId: props.review.id,
+      status: activeTab.value === "appeal" ? "edited" : "draft_ready",
+      public_response_edited: editedResponse.value || undefined,
+      appeal_text: editedAppeal.value || undefined,
+      appeal_confidence: props.review.appeal_confidence ?? undefined,
+      legal_grounds: legalGrounds.value,
+      feedback: revisionFeedback.value.trim(),
+    });
     revisionFeedback.value = "";
     showRevisionInput.value = false;
   }
@@ -96,9 +140,7 @@ function handleRequestRevision() {
         <button class="btn-primary flex-1" @click="handleApprove">
           Одобрить
         </button>
-        <button class="btn-secondary" @click="handleReject">
-          Отклонить
-        </button>
+        <button class="btn-secondary" @click="handleReject">Отклонить</button>
         <button
           class="btn-ghost"
           @click="showRevisionInput = !showRevisionInput"
@@ -145,15 +187,16 @@ function handleRequestRevision() {
             {{ sourceLabels[ground.source] ?? ground.source }}:
           </span>
           {{ ground.article }}
-          <p class="mt-0.5 text-amber-600 italic">
-            "{{ ground.citation }}"
-          </p>
+          <p class="mt-0.5 text-amber-600 italic">"{{ ground.citation }}"</p>
         </div>
       </div>
 
       <!-- Confidence Indicator -->
       <div
-        v-if="review.appeal_confidence !== undefined && review.appeal_confidence !== null"
+        v-if="
+          review.appeal_confidence !== undefined &&
+          review.appeal_confidence !== null
+        "
         class="space-y-1"
       >
         <label class="text-sm font-medium text-gray-700">
@@ -178,9 +221,7 @@ function handleRequestRevision() {
         <button class="btn-primary flex-1" @click="handleApprove">
           Отправить в модерацию
         </button>
-        <button class="btn-secondary" @click="handleReject">
-          Отклонить
-        </button>
+        <button class="btn-secondary" @click="handleReject">Отклонить</button>
       </div>
     </div>
   </div>

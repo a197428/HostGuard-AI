@@ -16,6 +16,7 @@ export interface LLMConfig {
   model?: string;
   maxRetries?: number;
   circuitBreakerThreshold?: number;
+  requestHeaders?: Record<string, string>;
   fetchImpl?: typeof fetch;
 }
 
@@ -26,6 +27,7 @@ export interface LLMCallOptions {
   temperature?: number;
   maxTokens?: number;
   reviewDate?: string;
+  traceId?: string;
 }
 
 export interface LLMCallResult {
@@ -110,6 +112,7 @@ export class DeepSeekClient implements LLMClient {
   private readonly baseUrl: string;
   private readonly maxRetries: number;
   private readonly circuitBreakerThreshold: number;
+  private readonly requestHeaders: Record<string, string>;
   private readonly fetchImpl: typeof fetch;
   private model: string;
   private readonly fallbackModel = "gpt-4o-mini";
@@ -120,6 +123,7 @@ export class DeepSeekClient implements LLMClient {
     this.model = config.model ?? "deepseek-v3.2";
     this.maxRetries = config.maxRetries ?? 3;
     this.circuitBreakerThreshold = config.circuitBreakerThreshold ?? 10;
+    this.requestHeaders = config.requestHeaders ?? {};
     this.fetchImpl = config.fetchImpl ?? fetch;
   }
 
@@ -130,6 +134,9 @@ export class DeepSeekClient implements LLMClient {
     options: LLMCallOptions,
   ): Promise<LLMCallResult> {
     const start = Date.now();
+    const traceId =
+      options.traceId ??
+      `trace_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const maskedText = PROMPTS.maskPII(reviewText);
     const userPrompt = PROMPTS.buildReviewAnalysisPrompt(
       maskedText,
@@ -138,7 +145,10 @@ export class DeepSeekClient implements LLMClient {
       options.reviewDate,
     );
 
-    const response = await this.executeWithRetry(userPrompt, options);
+    const response = await this.executeWithRetry(userPrompt, {
+      ...options,
+      traceId,
+    });
 
     return {
       response,
@@ -147,7 +157,7 @@ export class DeepSeekClient implements LLMClient {
         outputTokens: this.estimateTokens(JSON.stringify(response)),
       },
       latencyMs: Date.now() - start,
-      traceId: `trace_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      traceId,
       model: this.model,
     };
   }
@@ -231,6 +241,9 @@ export class DeepSeekClient implements LLMClient {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.apiKey}`,
+        "cf-aig-collect-log": "true",
+        "cf-aig-collect-log-payload": "false",
+        ...this.requestHeaders,
       },
       body: JSON.stringify({
         model: this.model,

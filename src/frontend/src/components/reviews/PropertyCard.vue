@@ -28,9 +28,7 @@ const emit = defineEmits<{
       </div>
       <div
         class="w-2 h-2 rounded-full"
-        :class="
-          property.is_monitoring_active ? 'bg-green-500' : 'bg-gray-300'
-        "
+        :class="property.is_monitoring_active ? 'bg-green-500' : 'bg-gray-300'"
         :title="
           property.is_monitoring_active
             ? 'Мониторинг активен'
@@ -44,9 +42,7 @@ const emit = defineEmits<{
       <span v-if="(negativeCount ?? 0) > 0" class="text-red-600 font-medium">
         Негативных: {{ negativeCount }}
       </span>
-      <span>
-        Интервал: {{ property.monitoring_interval }} мин
-      </span>
+      <span> Интервал: {{ property.monitoring_interval }} мин </span>
     </div>
   </div>
 </template>

@@ -1,11 +1,8 @@
 import type { Property, Review } from "@shared/types";
 
-const API_BASE = "/api";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "") + "/api";
 
-async function request<T>(
-  endpoint: string,
-  options?: RequestInit,
-): Promise<T> {
+async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     headers: {
       "Content-Type": "application/json",
@@ -16,56 +13,57 @@ async function request<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(
-      (error as { message?: string }).message ?? `API error: ${response.status}`,
-    );
+    const message =
+      (error as { message?: string; error?: string }).message ??
+      (error as { error?: string }).error ??
+      response.statusText ??
+      `API error: ${response.status}`;
+    throw new Error(message);
   }
 
-  return response.json() as Promise<T>;
+  const body = (await response.json()) as
+    | T
+    | {
+        data?: T;
+      };
+
+  if (body && typeof body === "object" && "data" in body) {
+    return (body as { data: T }).data;
+  }
+
+  return body as T;
+}
+
+function getOwnerId(): string | null {
+  try {
+    const parsed = JSON.parse(
+      localStorage.getItem("sb-gazkpdnagiicuumxljib-auth-token") ?? "{}",
+    );
+    return parsed?.user?.id ?? parsed?.data?.user?.id ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export const api = {
   // Properties
-  getProperties: () => request<Property[]>("/properties"),
+  getProperties: () => {
+    const ownerId = getOwnerId();
+    const query = ownerId ? `?owner_id=${ownerId}` : "";
+    return request<Property[]>(`/properties${query}`);
+  },
 
   getProperty: (id: string) => request<Property>(`/properties/${id}`),
 
   // Reviews
-  getReviews: (params?: {
-    propertyId?: string;
-    status?: string;
-    limit?: number;
-  }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.propertyId) searchParams.set("property_id", params.propertyId);
-    if (params?.status) searchParams.set("status", params.status);
-    if (params?.limit) searchParams.set("limit", String(params.limit));
-    const qs = searchParams.toString();
-    return request<Review[]>(`/reviews${qs ? `?${qs}` : ""}`);
-  },
+  getPropertyReviews: (propertyId: string) =>
+    request<Review[]>(`/properties/${propertyId}/reviews`),
 
   getReview: (id: string) => request<Review>(`/reviews/${id}`),
 
   updateReview: (id: string, data: Partial<Review>) =>
     request<Review>(`/reviews/${id}`, {
-      method: "PATCH",
+      method: "PUT",
       body: JSON.stringify(data),
-    }),
-
-  // Appeal
-  approveAppeal: (reviewId: string) =>
-    request<{ success: boolean }>(`/reviews/${reviewId}/approve`, {
-      method: "POST",
-    }),
-
-  rejectAppeal: (reviewId: string) =>
-    request<{ success: boolean }>(`/reviews/${reviewId}/reject`, {
-      method: "POST",
-    }),
-
-  requestRevision: (reviewId: string, feedback: string) =>
-    request<{ success: boolean }>(`/reviews/${reviewId}/revision`, {
-      method: "POST",
-      body: JSON.stringify({ feedback }),
     }),
 };

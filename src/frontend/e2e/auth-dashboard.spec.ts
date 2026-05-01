@@ -1,3 +1,5 @@
+/// <reference lib="dom" />
+
 import { test, expect } from "@playwright/test";
 
 test.describe("HostGuard AI - Auth & Dashboard Flow", () => {
@@ -128,7 +130,9 @@ test.describe("HostGuard AI - Auth & Dashboard Flow", () => {
 
     // Click on properties tab
     await page.getByText("Мои объекты").click();
-    await expect(page.getByText("У вас пока нет добавленных объектов")).toBeVisible();
+    await expect(
+      page.getByText("У вас пока нет добавленных объектов"),
+    ).toBeVisible();
 
     // Switch back to incidents
     await page.getByText("Лента инцидентов").click();

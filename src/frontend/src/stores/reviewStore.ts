@@ -12,7 +12,8 @@ export const useReviewStore = defineStore("review", () => {
 
   const negativeReviews = computed(() =>
     reviews.value.filter(
-      (r) => r.sentiment === "negative" || (r.rating !== undefined && r.rating < 4),
+      (r) =>
+        r.sentiment === "negative" || (r.rating !== undefined && r.rating < 4),
     ),
   );
 
@@ -58,7 +59,41 @@ export const useReviewStore = defineStore("review", () => {
     error.value = null;
 
     try {
-      reviews.value = await api.getReviews(params);
+      let loadedReviews: Review[];
+
+      if (params?.propertyId) {
+        loadedReviews = await api.getPropertyReviews(params.propertyId);
+      } else {
+        if (properties.value.length === 0) {
+          await fetchProperties();
+        }
+
+        const reviewBatches = await Promise.all(
+          properties.value.map((property) =>
+            api.getPropertyReviews(property.id),
+          ),
+        );
+
+        loadedReviews = reviewBatches
+          .flat()
+          .sort(
+            (left, right) =>
+              new Date(right.created_at).getTime() -
+              new Date(left.created_at).getTime(),
+          );
+      }
+
+      if (params?.status) {
+        loadedReviews = loadedReviews.filter(
+          (review) => review.status === params.status,
+        );
+      }
+
+      if (params?.limit) {
+        loadedReviews = loadedReviews.slice(0, params.limit);
+      }
+
+      reviews.value = loadedReviews;
     } catch (err) {
       error.value =
         err instanceof Error ? err.message : "Ошибка загрузки отзывов";
@@ -98,21 +133,6 @@ export const useReviewStore = defineStore("review", () => {
     }
   }
 
-  async function approveAppeal(reviewId: string) {
-    await api.approveAppeal(reviewId);
-    await fetchReview(reviewId);
-  }
-
-  async function rejectAppeal(reviewId: string) {
-    await api.rejectAppeal(reviewId);
-    await fetchReview(reviewId);
-  }
-
-  async function requestRevision(reviewId: string, feedback: string) {
-    await api.requestRevision(reviewId, feedback);
-    await fetchReview(reviewId);
-  }
-
   return {
     reviews,
     properties,
@@ -126,8 +146,5 @@ export const useReviewStore = defineStore("review", () => {
     fetchReviews,
     fetchReview,
     updateReview,
-    approveAppeal,
-    rejectAppeal,
-    requestRevision,
   };
 });

@@ -32,10 +32,7 @@ import { computed } from "vue";
     <span class="text-xs text-gray-500 whitespace-nowrap">
       {{ confidencePercent }}%
     </span>
-    <span
-      v-if="confidence < 0.7"
-      class="text-xs text-amber-600 font-medium"
-    >
+    <span v-if="confidence < 0.7" class="text-xs text-amber-600 font-medium">
       Рекомендуется ручная проверка
     </span>
   </div>

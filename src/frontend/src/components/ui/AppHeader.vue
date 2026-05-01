@@ -24,10 +24,7 @@ const authStore = useAuthStore();
         <span class="text-sm text-gray-500 hidden sm:inline">
           {{ authStore.user?.email }}
         </span>
-        <button
-          class="btn-ghost text-sm"
-          @click="authStore.signOut()"
-        >
+        <button class="btn-ghost text-sm" @click="authStore.signOut()">
           Выйти
         </button>
       </div>

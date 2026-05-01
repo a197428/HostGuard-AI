@@ -24,8 +24,7 @@ async function handleSubmit() {
     }
     router.push("/");
   } catch (err) {
-    localError.value =
-      err instanceof Error ? err.message : "Произошла ошибка";
+    localError.value = err instanceof Error ? err.message : "Произошла ошибка";
   } finally {
     submitting.value = false;
   }
@@ -98,12 +97,14 @@ function toggleMode() {
           />
         </div>
 
-        <button
-          type="submit"
-          class="btn-primary w-full"
-          :disabled="submitting"
-        >
-          {{ submitting ? "Загрузка..." : isLogin ? "Войти" : "Зарегистрироваться" }}
+        <button type="submit" class="btn-primary w-full" :disabled="submitting">
+          {{
+            submitting
+              ? "Загрузка..."
+              : isLogin
+                ? "Войти"
+                : "Зарегистрироваться"
+          }}
         </button>
 
         <p class="text-center text-sm text-gray-500">

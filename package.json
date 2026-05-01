@@ -13,6 +13,7 @@
     "dev": "npm run dev --workspace=src/backend",
     "dev:frontend": "npm run dev --workspace=src/frontend",
     "build": "npm run build --workspace=src/backend && npm run build --workspace=src/frontend",
+    "ai-eval": "vitest run tests/ai-eval-suite.test.ts",
     "lint": "eslint . && prettier --check .",
     "lint:fix": "eslint --fix . && prettier --write .",
     "test": "vitest run",
@@ -32,6 +33,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@sentry/cloudflare": "^10.51.0",
     "@upstash/redis": "^1.37.0"
   }
 }

@@ -1,13 +1,15 @@
+import * as Sentry from "@sentry/cloudflare";
 import { routeAgentRequest } from "agents";
 import { MonitorAgent } from "../agents/monitor-agent";
 import { createApiRouter } from "./api";
 import type { Env } from "../env";
+import { logStructured } from "../infrastructure/logging";
 
 export { MonitorAgent };
 
 const apiRouter = createApiRouter();
 
-export default {
+const workerHandler = {
   async fetch(
     request: Request,
     env: Env,
@@ -50,19 +52,27 @@ export default {
     _env: Env,
     _ctx: ExecutionContext,
   ): Promise<void> {
-    console.info(
-      JSON.stringify({
-        level: "info",
-        trace_id: `cron_${controller.scheduledTime}`,
-        owner_id: "system",
-        property_id: "system",
-        timestamp: new Date().toISOString(),
-        message: "Cron triggered",
+    logStructured("info", {
+      trace_id: `cron_${controller.scheduledTime}`,
+      owner_id: "system",
+      property_id: "system",
+      message: "Cron triggered",
+      data: {
         scheduled_time: controller.scheduledTime,
-      }),
-    );
+      },
+    });
   },
 };
+
+export default Sentry.withSentry(
+  (env: Env) => ({
+    dsn: env.SENTRY_DSN,
+    environment: env.SENTRY_ENVIRONMENT ?? "production",
+    release: env.SENTRY_RELEASE,
+    enableLogs: true,
+  }),
+  workerHandler,
+);
 
 interface ScheduledController {
   scheduledTime: number;

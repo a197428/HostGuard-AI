@@ -16,6 +16,7 @@ import {
   type LLMCallResult,
 } from "../infrastructure/deepseek";
 import { logStructured } from "../infrastructure/logging";
+import { reportError } from "../infrastructure/observability";
 import type { Env } from "../env";
 
 // =============================================================================
@@ -63,6 +64,11 @@ export interface MonitorAgentDependencies {
   redis: IRedisRepository;
   supabase: SupabaseRepository;
   llm: LLMClient;
+  observability: {
+    SENTRY_DSN?: string;
+    SENTRY_ENVIRONMENT?: string;
+    SENTRY_RELEASE?: string;
+  };
 }
 
 // =============================================================================
@@ -125,13 +131,28 @@ export function createMonitorAgentDependencies(
 
   const llm = new DeepSeekClient({
     apiKey: routerAiKey,
-    baseUrl: env.ROUTERAI_BASE_URL ?? "https://routerai.ru/api/v1",
+    baseUrl:
+      env.AI_GATEWAY_BASE_URL ??
+      env.ROUTERAI_BASE_URL ??
+      "https://routerai.ru/api/v1",
     model: env.DEEPSEEK_MODEL ?? "deepseek-v3.2",
     maxRetries: 3,
     circuitBreakerThreshold: 10,
+    requestHeaders: {
+      "x-hostguard-app": "hostguard-ai",
+    },
   });
 
-  return { redis, supabase, llm };
+  return {
+    redis,
+    supabase,
+    llm,
+    observability: {
+      SENTRY_DSN: env.SENTRY_DSN,
+      SENTRY_ENVIRONMENT: env.SENTRY_ENVIRONMENT,
+      SENTRY_RELEASE: env.SENTRY_RELEASE,
+    },
+  };
 }
 
 function createTraceId(): string {
@@ -282,6 +303,7 @@ export class MonitorAgentService {
         promptId: "appeal-agent",
         promptVersion: PROMPTS.VERSIONS.APPEAL_AGENT.version,
         reviewDate: context.reviewDate,
+        traceId,
       },
     );
 
@@ -414,17 +436,21 @@ export class MonitorAgentService {
     };
     this.state = nextState;
 
-    logStructured("error", {
-      trace_id: traceId,
-      owner_id: this.config.ownerId,
-      property_id: this.config.propertyId,
-      message: "ThinkActLoop error",
-      data: {
-        step: this.state.currentStep,
-        error: this.state.error,
-        retry_count: this.state.retryCount,
+    void reportError(
+      this.deps.observability,
+      {
+        trace_id: traceId,
+        owner_id: this.config.ownerId,
+        property_id: this.config.propertyId,
+        message: "ThinkActLoop error",
+        data: {
+          step: this.state.currentStep,
+          error: this.state.error,
+          retry_count: this.state.retryCount,
+        },
       },
-    });
+      error,
+    );
 
     return this.state;
   }
@@ -480,6 +506,11 @@ export function createMockMonitorAgentService(
     redis: overrides?.redis ?? new MockRedisRepository(),
     supabase: overrides?.supabase ?? mockSupabase,
     llm: overrides?.llm ?? new MockDeepSeekClient(),
+    observability: overrides?.observability ?? {
+      SENTRY_DSN: undefined,
+      SENTRY_ENVIRONMENT: undefined,
+      SENTRY_RELEASE: undefined,
+    },
   };
 
   return new MonitorAgentService(config, dependencies);

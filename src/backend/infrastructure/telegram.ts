@@ -7,10 +7,8 @@ import { Bot, InlineKeyboard, type Context } from "grammy";
 import type { Env } from "../env";
 import { PROMPTS } from "@hostguard/shared/prompts";
 import { logStructured } from "./logging";
-import {
-  createSupabaseClient,
-  SupabaseRepository,
-} from "./supabase";
+import { reportError } from "./observability";
+import { createSupabaseClient, SupabaseRepository } from "./supabase";
 
 // =============================================================================
 // Types
@@ -62,10 +60,7 @@ export function maskPIIForTelegram(text: string): string {
   let masked = text;
 
   // 1. Маскируем телефоны (с + или без, 10-12 цифр)
-  masked = masked.replace(
-    /\+?\d{10,12}(?!\w)/g,
-    "[PHONE]",
-  );
+  masked = masked.replace(/\+?\d{10,12}(?!\w)/g, "[PHONE]");
 
   // 2. Маскируем email
   masked = masked.replace(
@@ -107,7 +102,9 @@ export function buildAlertMessage(payload: ReviewAlertPayload): string {
   // Property info
   lines.push(`🏠 **Объект:** ${payload.propertyName}`);
   lines.push(`📱 **Платформа:** ${payload.platform}`);
-  lines.push(`⭐ **Рейтинг:** ${"★".repeat(payload.rating)}${"☆".repeat(5 - payload.rating)} (${payload.rating}/5)`);
+  lines.push(
+    `⭐ **Рейтинг:** ${"★".repeat(payload.rating)}${"☆".repeat(5 - payload.rating)} (${payload.rating}/5)`,
+  );
   if (payload.reviewDate) {
     lines.push(`📅 **Дата:** ${payload.reviewDate}`);
   }
@@ -124,7 +121,9 @@ export function buildAlertMessage(payload: ReviewAlertPayload): string {
     if (payload.legalGrounds && payload.legalGrounds.length > 0) {
       lines.push("**Юридические основания:**");
       for (const ground of payload.legalGrounds) {
-        lines.push(`  • ${ground.source}: ${ground.article} — ${ground.citation}`);
+        lines.push(
+          `  • ${ground.source}: ${ground.article} — ${ground.citation}`,
+        );
       }
     }
     lines.push("");
@@ -171,9 +170,7 @@ export function createAlertKeyboard(): InlineKeyboard {
  * Парсит callback_data и возвращает решение владельца.
  * Поддерживает формат "action" и "action:reviewId".
  */
-export function parseCallbackData(
-  callbackData: string,
-): OwnerDecision | null {
+export function parseCallbackData(callbackData: string): OwnerDecision | null {
   // Извлекаем префикс действия (до первого ":")
   const action = callbackData.split(":")[0];
 
@@ -197,9 +194,7 @@ export function parseCallbackData(
  * Создаёт и настраивает экземпляр Telegram Bot (grammY).
  * Регистрирует обработчики команд и callback-запросов.
  */
-export function createTelegramBot(
-  env: Env,
-): Bot<Context> | null {
+export function createTelegramBot(env: Env): Bot<Context> | null {
   const token = env.TELEGRAM_BOT_TOKEN;
   if (!token) {
     logStructured("warn", {
@@ -232,8 +227,8 @@ export function createTelegramBot(
     const telegramId = ctx.from?.id;
     await ctx.reply(
       `👋 Добро пожаловать в HostGuard AI!\n\n` +
-      `Я буду уведомлять вас о новых отзывах на ваши объекты. ` +
-      `Вы сможете одобрить черновик ответа, запросить правку или отклонить его.`,
+        `Я буду уведомлять вас о новых отзывах на ваши объекты. ` +
+        `Вы сможете одобрить черновик ответа, запросить правку или отклонить его.`,
     );
     logStructured("info", {
       trace_id: `telegram_start_${Date.now()}`,
@@ -247,18 +242,18 @@ export function createTelegramBot(
   bot.command("help", async (ctx) => {
     await ctx.reply(
       `🤖 **HostGuard AI — Помощь**\n\n` +
-      `Команды:\n` +
-      `/start — Начать работу\n` +
-      `/help — Эта справка\n\n` +
-      `При обнаружении негативного отзыва я пришлю вам:\n` +
-      `• Текст отзыва\n` +
-      `• Черновик публичного ответа\n` +
-      `• Черновик апелляции (если есть основания)\n` +
-      `• Кнопки для принятия решения\n\n` +
-      `**Кнопки:**\n` +
-      `✅ Одобрить — ответ готов к публикации\n` +
-      `✏️ Правка — запросить доработку\n` +
-      `❌ Отклонить — отклонить черновик`,
+        `Команды:\n` +
+        `/start — Начать работу\n` +
+        `/help — Эта справка\n\n` +
+        `При обнаружении негативного отзыва я пришлю вам:\n` +
+        `• Текст отзыва\n` +
+        `• Черновик публичного ответа\n` +
+        `• Черновик апелляции (если есть основания)\n` +
+        `• Кнопки для принятия решения\n\n` +
+        `**Кнопки:**\n` +
+        `✅ Одобрить — ответ готов к публикации\n` +
+        `✏️ Правка — запросить доработку\n` +
+        `❌ Отклонить — отклонить черновик`,
       { parse_mode: "Markdown" },
     );
   });
@@ -358,7 +353,7 @@ export async function handleCallbackQuery(
     // Отправляем подтверждение в чат
     await ctx.reply(
       `✅ **Решение принято!**\n\n${decisionLabels[decision]}\n\n` +
-      `Вы всегда можете изменить решение в дашборде HostGuard AI.`,
+        `Вы всегда можете изменить решение в дашборде HostGuard AI.`,
       { parse_mode: "Markdown" },
     );
 
@@ -449,17 +444,24 @@ export async function sendReviewAlert(
 
     return true;
   } catch (error) {
-    logStructured("error", {
-      trace_id: `telegram_send_error_${Date.now()}`,
-      owner_id: "system",
-      property_id: "system",
-      message: "Failed to send Telegram alert",
-      data: {
-        error: error instanceof Error ? error.message : "Unknown",
-        review_id: payload.reviewId,
-        owner_telegram_id: ownerTelegramId,
+    void reportError(
+      {
+        SENTRY_DSN: env.SENTRY_DSN,
+        SENTRY_ENVIRONMENT: env.SENTRY_ENVIRONMENT,
+        SENTRY_RELEASE: env.SENTRY_RELEASE,
       },
-    });
+      {
+        trace_id: `telegram_send_error_${Date.now()}`,
+        owner_id: "system",
+        property_id: "system",
+        message: "Failed to send Telegram alert",
+        data: {
+          review_id: payload.reviewId,
+          owner_telegram_id: ownerTelegramId,
+        },
+      },
+      error,
+    );
     return false;
   }
 }
@@ -488,22 +490,27 @@ export async function handleTelegramWebhook(
   }
 
   try {
-    const update = await request.json() as Record<string, unknown>;
+    const update = (await request.json()) as Record<string, unknown>;
     await bot.handleUpdate(update as any);
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { "content-type": "application/json" },
     });
   } catch (error) {
-    logStructured("error", {
-      trace_id: `telegram_webhook_${Date.now()}`,
-      owner_id: "system",
-      property_id: "system",
-      message: "Failed to handle Telegram webhook",
-      data: {
-        error: error instanceof Error ? error.message : "Unknown",
+    void reportError(
+      {
+        SENTRY_DSN: env.SENTRY_DSN,
+        SENTRY_ENVIRONMENT: env.SENTRY_ENVIRONMENT,
+        SENTRY_RELEASE: env.SENTRY_RELEASE,
       },
-    });
+      {
+        trace_id: `telegram_webhook_${Date.now()}`,
+        owner_id: "system",
+        property_id: "system",
+        message: "Failed to handle Telegram webhook",
+      },
+      error,
+    );
     return new Response(
       JSON.stringify({ ok: false, error: "Internal error" }),
       {

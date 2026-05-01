@@ -150,8 +150,8 @@ MVP (v1.0) → Стабилизация → v1.1 → v1.2 → v1.3 → v2.0 → 
 
 ### Спринт 3
 
-- [ ] Eval Suite: Golden Set + LLM-as-Judge + Red Teaming
-- [ ] CI/CD пайплайн с авто-прогоном тестов
+- [ ] Eval Suite: Golden Set (50 отзывов) + Faithfulness/Safety gate
+- [ ] CI/CD пайплайн с авто-прогоном тестов и блокировкой deploy при Faithfulness < 0.85
 - [ ] Observability: Sentry + Cloudflare Analytics + AI Gateway Logs
 
 ---

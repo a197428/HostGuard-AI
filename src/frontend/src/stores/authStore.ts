@@ -24,16 +24,17 @@ export const useAuthStore = defineStore("auth", () => {
     error.value = null;
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error: authError } = await supabase.auth.signInWithPassword(
+        {
+          email,
+          password,
+        },
+      );
 
       if (authError) throw authError;
       user.value = data.user;
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Ошибка входа";
+      const message = err instanceof Error ? err.message : "Ошибка входа";
       error.value = message;
       throw err;
     } finally {
@@ -54,8 +55,7 @@ export const useAuthStore = defineStore("auth", () => {
       if (authError) throw authError;
       user.value = data.user;
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Ошибка регистрации";
+      const message = err instanceof Error ? err.message : "Ошибка регистрации";
       error.value = message;
       throw err;
     } finally {
